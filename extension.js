@@ -9,6 +9,8 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import {SettingsStore} from './lib/settingsStore.js';
+
 const POLL_SECONDS = 60;
 const MAX_ITEMS_PER_SECTION = 8;
 
@@ -18,10 +20,11 @@ const MAX_ITEMS_PER_SECTION = 8;
  * logged in on this machine) instead of asking the user for a new one.
  */
 class GitHubClient {
-    constructor() {
+    constructor(settingsStore) {
         this._session = new Soup.Session();
         this._session.timeout = 15;
         this._token = null;
+        this._settingsStore = settingsStore;
     }
 
     _loadToken() {
@@ -91,8 +94,10 @@ class Indicator extends PanelMenu.Button {
     _init(extension) {
         super._init(0.5, 'PR Indicator');
         this._extension = extension;
-        this._client = new GitHubClient();
+        this._settingsStore = new SettingsStore(extension.getSettings());
+        this._client = new GitHubClient(this._settingsStore);
         this._timeoutId = null;
+        this._view = 'prs';
 
         const box = new St.BoxLayout({style_class: 'pr-indicator-box', y_align: 2 /* Clutter.ActorAlign.CENTER */});
         const iconPath = GLib.build_filenamev([this._extension.path, 'icons', 'github-symbolic.svg']);
@@ -109,28 +114,62 @@ class Indicator extends PanelMenu.Button {
         box.add_child(this._countLabel);
         this.add_child(box);
 
+        this._prView = new PopupMenu.PopupMenuSection();
         this._reviewSection = new PopupMenu.PopupMenuSection();
         this._mineSection = new PopupMenu.PopupMenuSection();
 
-        this.menu.box.add_child(this._sectionTitle('Precisa da minha revisão'));
-        this.menu.addMenuItem(this._reviewSection);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.box.add_child(this._sectionTitle('Meus PRs abertos'));
-        this.menu.addMenuItem(this._mineSection);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._prView.box.add_child(this._sectionTitle('Precisa da minha revisão'));
+        this._prView.addMenuItem(this._reviewSection);
+        this._prView.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._prView.box.add_child(this._sectionTitle('Meus PRs abertos'));
+        this._prView.addMenuItem(this._mineSection);
+        this._prView.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         const refreshItem = new PopupMenu.PopupMenuItem('Atualizar agora');
         refreshItem.connect('activate', () => this.refresh());
-        this.menu.addMenuItem(refreshItem);
+        this._prView.addMenuItem(refreshItem);
 
         this._statusItem = new PopupMenu.PopupMenuItem('', {reactive: false, style_class: 'pr-indicator-empty'});
-        this.menu.addMenuItem(this._statusItem);
+        this._prView.addMenuItem(this._statusItem);
+
+        this._configEntryRow = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        const configButton = new St.Button({x_expand: true, style_class: 'pr-indicator-config-entry'});
+        configButton.set_child(new St.Label({text: '⚙ Configurações'}));
+        configButton.connect('clicked', () => this._showConfigView());
+        this._configEntryRow.add_child(configButton);
+        this._prView.addMenuItem(this._configEntryRow);
+
+        this.menu.addMenuItem(this._prView);
+
+        this._configView = new PopupMenu.PopupMenuSection();
+        this._configView.actor.visible = false;
+
+        const backRow = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        const backButton = new St.Button({x_expand: true, style_class: 'pr-indicator-back-entry'});
+        backButton.set_child(new St.Label({text: '← Voltar'}));
+        backButton.connect('clicked', () => this._showPRView());
+        backRow.add_child(backButton);
+        this._configView.addMenuItem(backRow);
+
+        this.menu.addMenuItem(this._configView);
 
         this.refresh();
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_SECONDS, () => {
             this.refresh();
             return GLib.SOURCE_CONTINUE;
         });
+    }
+
+    _showConfigView() {
+        this._view = 'config';
+        this._prView.actor.visible = false;
+        this._configView.actor.visible = true;
+    }
+
+    _showPRView() {
+        this._view = 'prs';
+        this._configView.actor.visible = false;
+        this._prView.actor.visible = true;
     }
 
     _sectionTitle(text) {
