@@ -52,3 +52,27 @@
 .pr-indicator-back-entry {
     padding: 4px 12px;
 }
+
+.pr-indicator-theme-option {
+    padding: 4px 12px;
+}
+
+.pr-indicator-theme-check {
+    icon-size: 16px;
+    padding-right: 8px;
+}
+
+.pr-indicator-theme-white {
+    background-color: #ffffff;
+    color: #1a1a1a;
+}
+
+.pr-indicator-theme-black {
+    background-color: #101010;
+    color: #f2f2f2;
+}
+
+.pr-indicator-theme-glass {
+    background-color: rgba(20, 20, 20, 0.55);
+    color: #f2f2f2;
+}

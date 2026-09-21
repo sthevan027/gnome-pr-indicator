@@ -4,6 +4,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
 import Clutter from 'gi://Clutter';
+import Shell from 'gi://Shell';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -163,6 +164,11 @@ class Indicator extends PanelMenu.Button {
         this._configView.box.add_child(this._sectionTitle('Ordem e visibilidade das seções'));
         this._configView.addMenuItem(this._buildSectionsOrderRows());
 
+        this._configView.box.add_child(this._sectionTitle('Tema'));
+        this._configView.addMenuItem(this._buildThemeSection());
+
+        this._applyTheme(this._settingsStore.getTheme());
+
         this.refresh();
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_SECONDS, () => {
             this.refresh();
@@ -273,6 +279,77 @@ class Indicator extends PanelMenu.Button {
 
         this._settingsStore.setSectionsConfig(updated);
         this.refresh();
+    }
+
+    _buildThemeSection() {
+        const wrapper = new St.BoxLayout({vertical: true, x_expand: true});
+        this._themeCheckIcons = {};
+
+        const options = [
+            ['auto', 'Automático'],
+            ['white', 'Branco'],
+            ['black', 'Preto'],
+            ['glass', 'Glass'],
+        ];
+        const current = this._settingsStore.getTheme();
+
+        for (const [value, label] of options) {
+            const row = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+            const button = new St.Button({x_expand: true, style_class: 'pr-indicator-theme-option'});
+            const box = new St.BoxLayout({x_expand: true});
+            const check = new St.Icon({
+                icon_name: value === current ? 'object-select-symbolic' : '',
+                style_class: 'pr-indicator-theme-check',
+            });
+            const text = new St.Label({text: label, x_expand: true, y_align: 2});
+
+            box.add_child(check);
+            box.add_child(text);
+            button.set_child(box);
+            button.connect('clicked', () => this._onSelectTheme(value));
+            row.add_child(button);
+
+            this._themeCheckIcons[value] = check;
+            wrapper.add_child(row);
+        }
+
+        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        item.add_child(wrapper);
+        return item;
+    }
+
+    _onSelectTheme(value) {
+        for (const [key, icon] of Object.entries(this._themeCheckIcons))
+            icon.icon_name = key === value ? 'object-select-symbolic' : '';
+
+        this._settingsStore.setTheme(value);
+        this._applyTheme(value);
+    }
+
+    _applyTheme(themeName) {
+        const classes = ['pr-indicator-theme-white', 'pr-indicator-theme-black', 'pr-indicator-theme-glass'];
+        for (const cls of classes)
+            this.menu.actor.remove_style_class_name(cls);
+
+        if (this._blurEffect) {
+            this.menu.actor.remove_effect(this._blurEffect);
+            this._blurEffect = null;
+        }
+
+        if (themeName === 'white') {
+            this.menu.actor.add_style_class_name('pr-indicator-theme-white');
+        } else if (themeName === 'black') {
+            this.menu.actor.add_style_class_name('pr-indicator-theme-black');
+        } else if (themeName === 'glass') {
+            this.menu.actor.add_style_class_name('pr-indicator-theme-glass');
+            this._blurEffect = new Shell.BlurEffect({
+                brightness: 0.85,
+                sigma: 30,
+                mode: Shell.BlurMode.BACKGROUND,
+            });
+            this.menu.actor.add_effect(this._blurEffect);
+        }
+        // 'auto' não adiciona classe nenhuma — comportamento padrão do sistema.
     }
 
     _sectionTitle(text) {
