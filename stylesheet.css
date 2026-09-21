@@ -28,3 +28,27 @@
     opacity: 0.6;
     font-size: 0.85em;
 }
+
+.pr-indicator-config-row {
+    padding: 4px 12px;
+}
+
+.pr-indicator-config-row-hidden {
+    opacity: 0.45;
+}
+
+.pr-indicator-drag-handle {
+    icon-size: 16px;
+    padding-right: 6px;
+}
+
+.pr-indicator-toggle-button {
+    font-weight: bold;
+    padding: 0 8px;
+    min-width: 24px;
+}
+
+.pr-indicator-config-entry,
+.pr-indicator-back-entry {
+    padding: 4px 12px;
+}

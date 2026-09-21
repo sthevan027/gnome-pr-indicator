@@ -3,6 +3,7 @@ import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
+import Clutter from 'gi://Clutter';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -10,9 +11,15 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {SettingsStore} from './lib/settingsStore.js';
+import {moveSection, toggleHidden, effectiveOrder} from './lib/sectionsConfig.js';
 
 const POLL_SECONDS = 60;
 const MAX_ITEMS_PER_SECTION = 8;
+
+const SECTION_LABELS = {
+    review: 'Precisa da minha revisão',
+    mine: 'Meus PRs abertos',
+};
 
 /**
  * Talks to the GitHub Search API for "PRs needing my review" and
@@ -153,6 +160,9 @@ class Indicator extends PanelMenu.Button {
 
         this.menu.addMenuItem(this._configView);
 
+        this._configView.box.add_child(this._sectionTitle('Ordem e visibilidade das seções'));
+        this._configView.addMenuItem(this._buildSectionsOrderRows());
+
         this.refresh();
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_SECONDS, () => {
             this.refresh();
@@ -170,6 +180,99 @@ class Indicator extends PanelMenu.Button {
         this._view = 'prs';
         this._configView.actor.visible = false;
         this._prView.actor.visible = true;
+    }
+
+    _buildSectionsOrderRows() {
+        this._sectionsOrderContainer = new St.BoxLayout({vertical: true, x_expand: true});
+        this._sectionRows = {};
+
+        const list = this._settingsStore.getSectionsConfig();
+        for (const section of list)
+            this._sectionsOrderContainer.add_child(this._makeSectionRow(section));
+
+        const wrapper = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        wrapper.add_child(this._sectionsOrderContainer);
+        return wrapper;
+    }
+
+    _makeSectionRow(section) {
+        const row = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        row._sectionId = section.id;
+        row.add_style_class_name('pr-indicator-config-row');
+        if (section.hidden)
+            row.add_style_class_name('pr-indicator-config-row-hidden');
+
+        const handle = new St.Icon({
+            icon_name: 'view-list-symbolic',
+            style_class: 'pr-indicator-drag-handle',
+            reactive: true,
+        });
+        const label = new St.Label({
+            text: SECTION_LABELS[section.id] ?? section.id,
+            x_expand: true,
+            y_align: 2,
+        });
+        const toggleButton = new St.Button({
+            style_class: 'pr-indicator-toggle-button',
+            label: section.hidden ? '+' : '−',
+            can_focus: true,
+        });
+        toggleButton.connect('clicked', () => this._onToggleSection(section.id));
+
+        row.add_child(handle);
+        row.add_child(label);
+        row.add_child(toggleButton);
+        row._toggleButton = toggleButton;
+
+        const dragAction = new Clutter.DragAction({dragThreshold: 4});
+        handle.add_action(dragAction);
+        dragAction.connect('drag-motion', (action, actor, deltaX, deltaY) => {
+            this._reorderDuringDrag(row, deltaY);
+        });
+        dragAction.connect('drag-end', () => this._commitSectionOrder());
+
+        this._sectionRows[section.id] = row;
+        return row;
+    }
+
+    _reorderDuringDrag(row, deltaY) {
+        const container = this._sectionsOrderContainer;
+        const siblings = container.get_children();
+        const index = siblings.indexOf(row);
+        const rowHeight = row.get_height() || 1;
+
+        if (deltaY > rowHeight / 2 && index < siblings.length - 1)
+            container.set_child_above_sibling(row, siblings[index + 1]);
+        else if (deltaY < -rowHeight / 2 && index > 0)
+            container.set_child_below_sibling(row, siblings[index - 1]);
+    }
+
+    _onToggleSection(id) {
+        const current = this._settingsStore.getSectionsConfig();
+        const updated = toggleHidden(current, id);
+        this._settingsStore.setSectionsConfig(updated);
+
+        const row = this._sectionRows[id];
+        const nowHidden = updated.find(section => section.id === id)?.hidden;
+        row._toggleButton.label = nowHidden ? '+' : '−';
+        if (nowHidden)
+            row.add_style_class_name('pr-indicator-config-row-hidden');
+        else
+            row.remove_style_class_name('pr-indicator-config-row-hidden');
+
+        this.refresh();
+    }
+
+    _commitSectionOrder() {
+        const orderedIds = this._sectionsOrderContainer.get_children().map(row => row._sectionId);
+        const current = this._settingsStore.getSectionsConfig();
+
+        let updated = current;
+        for (let i = 1; i < orderedIds.length; i++)
+            updated = moveSection(updated, orderedIds[i], orderedIds[i - 1]);
+
+        this._settingsStore.setSectionsConfig(updated);
+        this.refresh();
     }
 
     _sectionTitle(text) {
@@ -204,8 +307,14 @@ class Indicator extends PanelMenu.Button {
                 this._client.fetchMyOpenPRs(),
             ]);
 
-            this._fillSection(this._reviewSection, needsReview);
-            this._fillSection(this._mineSection, mine);
+            const itemsBySection = {review: needsReview, mine};
+            const visibleIds = effectiveOrder(this._settingsStore.getSectionsConfig());
+
+            this._reviewSection.actor.get_parent().visible = visibleIds.includes('review');
+            this._mineSection.actor.get_parent().visible = visibleIds.includes('mine');
+
+            this._fillSection(this._reviewSection, itemsBySection.review ?? []);
+            this._fillSection(this._mineSection, itemsBySection.mine ?? []);
             this._countLabel.text = String(needsReview.length);
 
             const now = GLib.DateTime.new_now_local().format('%H:%M');
