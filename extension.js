@@ -95,8 +95,9 @@ class Indicator extends PanelMenu.Button {
         this._timeoutId = null;
 
         const box = new St.BoxLayout({style_class: 'pr-indicator-box', y_align: 2 /* Clutter.ActorAlign.CENTER */});
+        const iconPath = GLib.build_filenamev([this._extension.path, 'icons', 'github-symbolic.svg']);
         this._icon = new St.Icon({
-            icon_name: 'emblem-synchronizing-symbolic',
+            gicon: Gio.icon_new_for_string(iconPath),
             style_class: 'system-status-icon',
         });
         this._countLabel = new St.Label({
