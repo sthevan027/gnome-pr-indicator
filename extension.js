@@ -245,12 +245,31 @@ class Indicator extends PanelMenu.Button {
         row.add_child(toggleButton);
         row._toggleButton = toggleButton;
 
-        const dragAction = new Clutter.DragAction({dragThreshold: 4});
-        handle.add_action(dragAction);
-        dragAction.connect('drag-motion', (action, actor, deltaX, deltaY) => {
-            this._reorderDuringDrag(row, deltaY);
+        // Clutter.DragAction foi removido no Mutter 18 (GNOME 50) em favor da
+        // API de Clutter.Gesture. Reordenar arrastando é reimplementado aqui
+        // à mão, rastreando o ponteiro no stage entre press e release.
+        handle.connect('button-press-event', (actor, event) => {
+            if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+                return Clutter.EVENT_PROPAGATE;
+
+            const stage = handle.get_stage();
+            let [, lastY] = event.get_coords();
+
+            const motionId = stage.connect('motion-event', (_stage, motionEvent) => {
+                const [, y] = motionEvent.get_coords();
+                this._reorderDuringDrag(row, y - lastY);
+                lastY = y;
+                return Clutter.EVENT_STOP;
+            });
+            const releaseId = stage.connect('button-release-event', () => {
+                stage.disconnect(motionId);
+                stage.disconnect(releaseId);
+                this._commitSectionOrder();
+                return Clutter.EVENT_STOP;
+            });
+
+            return Clutter.EVENT_STOP;
         });
-        dragAction.connect('drag-end', () => this._commitSectionOrder());
 
         this._sectionRows[section.id] = row;
         return row;
