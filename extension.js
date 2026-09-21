@@ -434,16 +434,26 @@ class Indicator extends PanelMenu.Button {
             return;
 
         this._tokenFeedbackLabel.text = 'Validando…';
+        let login;
         try {
-            const login = await this._validateToken(value);
-            await this._settingsStore.setToken(value);
-            this._client.resetToken();
-            this._tokenFeedbackLabel.text = `✓ conectado como ${login}`;
-            this.refresh();
+            login = await this._validateToken(value);
         } catch (e) {
             this._tokenFeedbackLabel.text = '✗ token inválido ou sem permissão';
             logError(e, 'pr-indicator: falha ao validar token manual');
+            return;
         }
+
+        try {
+            await this._settingsStore.setToken(value);
+        } catch (e) {
+            this._tokenFeedbackLabel.text = '✗ token válido, mas falhou ao salvar no chaveiro do sistema';
+            logError(e, 'pr-indicator: falha ao gravar token no keyring');
+            return;
+        }
+
+        this._client.resetToken();
+        this._tokenFeedbackLabel.text = `✓ conectado como ${login}`;
+        this.refresh();
     }
 
     _sectionTitle(text) {

@@ -4,5 +4,6 @@
   "description": "Mostra na barra superior os PRs esperando sua revisão e os seus PRs abertos no GitHub.",
   "shell-version": ["48", "49", "50"],
   "url": "https://github.com/sthevan027/gnome-pr-indicator",
-  "version-name": "1.0.0"
+  "version-name": "1.0.0",
+  "settings-schema": "org.gnome.shell.extensions.pr-indicator"
 }
