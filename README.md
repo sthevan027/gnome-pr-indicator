@@ -8,15 +8,6 @@ esperando a sua revisão e os seus PRs próprios abertos no GitHub. Clique no
 
 Atualiza sozinha a cada 60 segundos.
 
-## Por quê
-
-Inspirada em duas referências:
-
-- [pr-widget](https://github.com/lucianodiisouza/pr-widget) — menu bar app
-  parecido, só que pra macOS.
-- [PrimoDock](https://dock.oprimo.dev/) — dock com widgets ao vivo, também
-  macOS (projeto maior, ainda não iniciado por aqui).
-
 ## Requisitos
 
 - GNOME Shell 48, 49 ou 50.
