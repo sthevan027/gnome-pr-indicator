@@ -35,29 +35,41 @@ class GitHubClient {
         this._settingsStore = settingsStore;
     }
 
-    _loadToken() {
+    async _loadToken() {
         if (this._token)
             return this._token;
 
         try {
             const [ok, stdout] = GLib.spawn_command_line_sync('gh auth token');
             if (ok && stdout) {
-                this._token = new TextDecoder().decode(stdout).trim();
+                const ghToken = new TextDecoder().decode(stdout).trim();
+                if (ghToken) {
+                    this._token = ghToken;
+                    return this._token;
+                }
             }
         } catch (e) {
             logError(e, 'pr-indicator: failed to read gh auth token');
         }
-        return this._token;
+
+        const manual = await this._settingsStore.getToken();
+        if (manual) {
+            this._token = manual;
+            return this._token;
+        }
+        return null;
     }
 
-    _search(query) {
-        return new Promise((resolve, reject) => {
-            const token = this._loadToken();
-            if (!token) {
-                reject(new Error('sem token do gh (rode "gh auth login")'));
-                return;
-            }
+    resetToken() {
+        this._token = null;
+    }
 
+    async _search(query) {
+        const token = await this._loadToken();
+        if (!token)
+            throw new Error('sem token (rode "gh auth login" ou configure um token manual)');
+
+        return new Promise((resolve, reject) => {
             const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query)}&per_page=${MAX_ITEMS_PER_SECTION}`;
             const msg = Soup.Message.new('GET', url);
             msg.request_headers.append('Authorization', `Bearer ${token}`);
@@ -168,6 +180,9 @@ class Indicator extends PanelMenu.Button {
         this._configView.addMenuItem(this._buildThemeSection());
 
         this._applyTheme(this._settingsStore.getTheme());
+
+        this._configView.box.add_child(this._sectionTitle('Autenticação'));
+        this._configView.addMenuItem(this._buildAuthSection());
 
         this.refresh();
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_SECONDS, () => {
@@ -350,6 +365,85 @@ class Indicator extends PanelMenu.Button {
             this.menu.actor.add_effect(this._blurEffect);
         }
         // 'auto' não adiciona classe nenhuma — comportamento padrão do sistema.
+    }
+
+    _buildAuthSection() {
+        const container = new St.BoxLayout({vertical: true, x_expand: true});
+
+        this._authStatusLabel = new St.Label({text: '', style_class: 'pr-indicator-empty', x_expand: true});
+        container.add_child(this._authStatusLabel);
+
+        this._tokenEntry = new St.Entry({
+            hint_text: 'Token do GitHub (escopos repo, read:org)',
+            can_focus: true,
+            x_expand: true,
+            style_class: 'pr-indicator-token-entry',
+        });
+        this._tokenEntry.clutter_text.set_password_char('•');
+        this._tokenEntry.clutter_text.connect('activate', () => this._onSubmitToken());
+        container.add_child(this._tokenEntry);
+
+        this._tokenFeedbackLabel = new St.Label({text: '', style_class: 'pr-indicator-empty', x_expand: true});
+        container.add_child(this._tokenFeedbackLabel);
+
+        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        item.add_child(container);
+
+        this._refreshAuthSection();
+        return item;
+    }
+
+    _refreshAuthSection() {
+        const hasGh = this._settingsStore.hasValidGhAuth();
+        this._tokenEntry.reactive = !hasGh;
+        this._tokenEntry.can_focus = !hasGh;
+        this._tokenEntry.opacity = hasGh ? 120 : 255;
+        this._authStatusLabel.text = hasGh
+            ? '✓ Usando gh CLI (autenticado)'
+            : 'gh CLI não encontrado — configure um token manual abaixo';
+    }
+
+    _validateToken(token) {
+        return new Promise((resolve, reject) => {
+            const session = new Soup.Session();
+            session.timeout = 15;
+            const msg = Soup.Message.new('GET', 'https://api.github.com/user');
+            msg.request_headers.append('Authorization', `Bearer ${token}`);
+            msg.request_headers.append('Accept', 'application/vnd.github+json');
+            msg.request_headers.append('User-Agent', 'pr-indicator-gnome-extension');
+
+            session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null, (source, result) => {
+                try {
+                    if (msg.get_status() !== Soup.Status.OK) {
+                        reject(new Error(`GitHub respondeu ${msg.get_status()}`));
+                        return;
+                    }
+                    const bytes = session.send_and_read_finish(result);
+                    const json = JSON.parse(new TextDecoder().decode(bytes.get_data()));
+                    resolve(json.login);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
+    }
+
+    async _onSubmitToken() {
+        const value = this._tokenEntry.get_text().trim();
+        if (!value)
+            return;
+
+        this._tokenFeedbackLabel.text = 'Validando…';
+        try {
+            const login = await this._validateToken(value);
+            await this._settingsStore.setToken(value);
+            this._client.resetToken();
+            this._tokenFeedbackLabel.text = `✓ conectado como ${login}`;
+            this.refresh();
+        } catch (e) {
+            this._tokenFeedbackLabel.text = '✗ token inválido ou sem permissão';
+            logError(e, 'pr-indicator: falha ao validar token manual');
+        }
     }
 
     _sectionTitle(text) {
