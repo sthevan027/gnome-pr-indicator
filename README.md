@@ -8,6 +8,8 @@ esperando a sua revisão e os seus PRs próprios abertos no GitHub. Clique no
 
 Atualiza sozinha a cada 60 segundos.
 
+![Popup do PR Indicator na barra superior](screenshots/popup.png)
+
 ## Requisitos
 
 - GNOME Shell 48, 49 ou 50.
