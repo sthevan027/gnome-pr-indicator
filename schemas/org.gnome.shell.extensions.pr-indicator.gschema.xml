@@ -16,5 +16,10 @@
       <summary>Tema do popup</summary>
       <description>Um de: auto, white, black, glass</description>
     </key>
+    <key name="badge-section" type="s">
+      <default>'review'</default>
+      <summary>Seção que o indicador acompanha</summary>
+      <description>Qual seção o número no painel superior reflete: review ou mine</description>
+    </key>
   </schema>
 </schemalist>

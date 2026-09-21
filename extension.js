@@ -117,7 +117,6 @@ class Indicator extends PanelMenu.Button {
         this._settingsStore = new SettingsStore(extension.getSettings());
         this._client = new GitHubClient(this._settingsStore);
         this._timeoutId = null;
-        this._view = 'prs';
 
         const box = new St.BoxLayout({style_class: 'pr-indicator-box', y_align: 2 /* Clutter.ActorAlign.CENTER */});
         const iconPath = GLib.build_filenamev([this._extension.path, 'icons', 'github-symbolic.svg']);
@@ -130,77 +129,79 @@ class Indicator extends PanelMenu.Button {
             style_class: 'pr-indicator-count',
             y_align: 2,
         });
+        this._settingsButton = new St.Button({
+            style_class: 'pr-indicator-settings-button',
+            can_focus: true,
+            y_align: 2,
+        });
+        this._settingsButton.set_child(new St.Icon({
+            icon_name: 'emblem-system-symbolic',
+            style_class: 'popup-menu-icon',
+        }));
         box.add_child(this._icon);
         box.add_child(this._countLabel);
+        box.add_child(this._settingsButton);
         this.add_child(box);
 
         this._prView = new PopupMenu.PopupMenuSection();
         this._reviewSection = new PopupMenu.PopupMenuSection();
         this._mineSection = new PopupMenu.PopupMenuSection();
 
-        this._prView.box.add_child(this._sectionTitle('Precisa da minha revisão'));
-        this._prView.addMenuItem(this._reviewSection);
-        this._prView.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this._prView.box.add_child(this._sectionTitle('Meus PRs abertos'));
-        this._prView.addMenuItem(this._mineSection);
-        this._prView.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._reviewTitle = this._sectionTitle('Precisa da minha revisão');
+        this._reviewSeparator = new PopupMenu.PopupSeparatorMenuItem();
+        this._reviewBlock = new St.BoxLayout({vertical: true, x_expand: true});
+        this._reviewBlock.add_child(this._reviewTitle);
+        this._reviewBlock.add_child(this._reviewSection.actor);
+        this._reviewBlock.add_child(this._reviewSeparator.actor);
+        this._prView.box.add_child(this._reviewBlock);
+
+        this._mineTitle = this._sectionTitle('Meus PRs abertos');
+        this._mineSeparator = new PopupMenu.PopupSeparatorMenuItem();
+        this._mineBlock = new St.BoxLayout({vertical: true, x_expand: true});
+        this._mineBlock.add_child(this._mineTitle);
+        this._mineBlock.add_child(this._mineSection.actor);
+        this._mineBlock.add_child(this._mineSeparator.actor);
+        this._prView.box.add_child(this._mineBlock);
 
         const refreshItem = new PopupMenu.PopupMenuItem('Atualizar agora');
         refreshItem.connect('activate', () => this.refresh());
         this._prView.addMenuItem(refreshItem);
+        this._refreshItem = refreshItem;
 
         this._statusItem = new PopupMenu.PopupMenuItem('', {reactive: false, style_class: 'pr-indicator-empty'});
         this._prView.addMenuItem(this._statusItem);
 
-        this._configEntryRow = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-        const configButton = new St.Button({x_expand: true, style_class: 'pr-indicator-config-entry'});
-        configButton.set_child(new St.Label({text: '⚙ Configurações'}));
-        configButton.connect('clicked', () => this._showConfigView());
-        this._configEntryRow.add_child(configButton);
-        this._prView.addMenuItem(this._configEntryRow);
-
         this.menu.addMenuItem(this._prView);
 
-        this._configView = new PopupMenu.PopupMenuSection();
-        this._configView.actor.visible = false;
+        // Popup de configuração é independente do popup de PRs — preso ao
+        // botão de engrenagem, não ao indicador inteiro — pra não inchar a
+        // lista de PRs com a tela de config inteira.
+        this._configMenu = new PopupMenu.PopupMenu(this._settingsButton, 0.5, St.Side.TOP);
+        this._configMenu.actor.add_style_class_name('panel-menu');
+        Main.layoutManager.addTopChrome(this._configMenu.actor);
+        this._configMenu.actor.hide();
+        Main.panel.menuManager.addMenu(this._configMenu);
+        this._settingsButton.connect('clicked', () => this._configMenu.toggle());
 
-        const backRow = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-        const backButton = new St.Button({x_expand: true, style_class: 'pr-indicator-back-entry'});
-        backButton.set_child(new St.Label({text: '← Voltar'}));
-        backButton.connect('clicked', () => this._showPRView());
-        backRow.add_child(backButton);
-        this._configView.addMenuItem(backRow);
+        this._configMenu.box.add_child(this._sectionTitle('Ordem e visibilidade das seções'));
+        this._configMenu.addMenuItem(this._buildSectionsOrderRows());
 
-        this.menu.addMenuItem(this._configView);
+        this._configMenu.box.add_child(this._sectionTitle('O indicador acompanha'));
+        this._configMenu.addMenuItem(this._buildBadgeSection());
 
-        this._configView.box.add_child(this._sectionTitle('Ordem e visibilidade das seções'));
-        this._configView.addMenuItem(this._buildSectionsOrderRows());
+        this._configMenu.box.add_child(this._sectionTitle('Tema'));
+        this._configMenu.addMenuItem(this._buildThemeSection());
 
-        this._configView.box.add_child(this._sectionTitle('Tema'));
-        this._configView.addMenuItem(this._buildThemeSection());
+        this._configMenu.box.add_child(this._sectionTitle('Autenticação'));
+        this._configMenu.addMenuItem(this._buildAuthSection());
 
         this._applyTheme(this._settingsStore.getTheme());
-
-        this._configView.box.add_child(this._sectionTitle('Autenticação'));
-        this._configView.addMenuItem(this._buildAuthSection());
 
         this.refresh();
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_SECONDS, () => {
             this.refresh();
             return GLib.SOURCE_CONTINUE;
         });
-    }
-
-    _showConfigView() {
-        this._view = 'config';
-        this._prView.actor.visible = false;
-        this._configView.actor.visible = true;
-    }
-
-    _showPRView() {
-        this._view = 'prs';
-        this._configView.actor.visible = false;
-        this._prView.actor.visible = true;
     }
 
     _buildSectionsOrderRows() {
@@ -248,22 +249,32 @@ class Indicator extends PanelMenu.Button {
         // Clutter.DragAction foi removido no Mutter 18 (GNOME 50) em favor da
         // API de Clutter.Gesture. Reordenar arrastando é reimplementado aqui
         // à mão, rastreando o ponteiro no stage entre press e release.
+        //
+        // motionId/releaseId ficam presos no `stage` (global, fora do popup),
+        // então se o popup fechar/for destruído no meio do drag (reload da
+        // extensão, disable/enable) e ninguém desconectar, o handler de
+        // motion continua vivo pra sempre, disparando a cada movimento do
+        // mouse em qualquer lugar do desktop e lançando exceção porque `row`
+        // já foi destruído — foi isso que gerou a enxurrada de erros
+        // "already disposed" no journal. _endDrag() garante que os dois
+        // sempre são desconectados, mesmo fora do fluxo normal de release.
         handle.connect('button-press-event', (actor, event) => {
             if (event.get_button() !== Clutter.BUTTON_PRIMARY)
                 return Clutter.EVENT_PROPAGATE;
 
-            const stage = handle.get_stage();
+            this._endDrag();
+
+            this._dragStage = handle.get_stage();
             let [, lastY] = event.get_coords();
 
-            const motionId = stage.connect('motion-event', (_stage, motionEvent) => {
+            this._dragMotionId = this._dragStage.connect('motion-event', (_stage, motionEvent) => {
                 const [, y] = motionEvent.get_coords();
                 this._reorderDuringDrag(row, y - lastY);
                 lastY = y;
                 return Clutter.EVENT_STOP;
             });
-            const releaseId = stage.connect('button-release-event', () => {
-                stage.disconnect(motionId);
-                stage.disconnect(releaseId);
+            this._dragReleaseId = this._dragStage.connect('button-release-event', () => {
+                this._endDrag();
                 this._commitSectionOrder();
                 return Clutter.EVENT_STOP;
             });
@@ -273,6 +284,20 @@ class Indicator extends PanelMenu.Button {
 
         this._sectionRows[section.id] = row;
         return row;
+    }
+
+    _endDrag() {
+        if (!this._dragStage)
+            return;
+        if (this._dragMotionId) {
+            this._dragStage.disconnect(this._dragMotionId);
+            this._dragMotionId = null;
+        }
+        if (this._dragReleaseId) {
+            this._dragStage.disconnect(this._dragReleaseId);
+            this._dragReleaseId = null;
+        }
+        this._dragStage = null;
     }
 
     _reorderDuringDrag(row, deltaY) {
@@ -312,6 +337,49 @@ class Indicator extends PanelMenu.Button {
             updated = moveSection(updated, orderedIds[i], orderedIds[i - 1]);
 
         this._settingsStore.setSectionsConfig(updated);
+        this.refresh();
+    }
+
+    _buildBadgeSection() {
+        const wrapper = new St.BoxLayout({vertical: true, x_expand: true});
+        this._badgeCheckIcons = {};
+
+        const options = [
+            ['review', 'PRs pra eu revisar'],
+            ['mine', 'Meus PRs abertos'],
+        ];
+        const current = this._settingsStore.getBadgeSection();
+
+        for (const [value, label] of options) {
+            const row = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+            const button = new St.Button({x_expand: true, style_class: 'pr-indicator-theme-option'});
+            const box = new St.BoxLayout({x_expand: true});
+            const check = new St.Icon({
+                icon_name: value === current ? 'object-select-symbolic' : '',
+                style_class: 'pr-indicator-theme-check',
+            });
+            const text = new St.Label({text: label, x_expand: true, y_align: 2});
+
+            box.add_child(check);
+            box.add_child(text);
+            button.set_child(box);
+            button.connect('clicked', () => this._onSelectBadgeSection(value));
+            row.add_child(button);
+
+            this._badgeCheckIcons[value] = check;
+            wrapper.add_child(row);
+        }
+
+        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        item.add_child(wrapper);
+        return item;
+    }
+
+    _onSelectBadgeSection(value) {
+        for (const [key, icon] of Object.entries(this._badgeCheckIcons))
+            icon.icon_name = key === value ? 'object-select-symbolic' : '';
+
+        this._settingsStore.setBadgeSection(value);
         this.refresh();
     }
 
@@ -361,27 +429,40 @@ class Indicator extends PanelMenu.Button {
     }
 
     _applyTheme(themeName) {
+        // A classe precisa ir em `menu.box` (nó `.popup-menu-content`), não em
+        // `menu.actor` (o BoxPointer): é o `.popup-menu-content` que o tema do
+        // sistema pinta com fundo/borda — o BoxPointer em si é transparente.
         const classes = ['pr-indicator-theme-white', 'pr-indicator-theme-black', 'pr-indicator-theme-glass'];
-        for (const cls of classes)
-            this.menu.actor.remove_style_class_name(cls);
+        const targetClass = {
+            white: 'pr-indicator-theme-white',
+            black: 'pr-indicator-theme-black',
+            glass: 'pr-indicator-theme-glass',
+        }[themeName];
 
-        if (this._blurEffect) {
-            this.menu.actor.remove_effect(this._blurEffect);
-            this._blurEffect = null;
-        }
+        for (const menu of [this.menu, this._configMenu]) {
+            for (const cls of classes)
+                menu.box.remove_style_class_name(cls);
 
-        if (themeName === 'white') {
-            this.menu.actor.add_style_class_name('pr-indicator-theme-white');
-        } else if (themeName === 'black') {
-            this.menu.actor.add_style_class_name('pr-indicator-theme-black');
-        } else if (themeName === 'glass') {
-            this.menu.actor.add_style_class_name('pr-indicator-theme-glass');
-            this._blurEffect = new Shell.BlurEffect({
-                brightness: 0.85,
-                sigma: 30,
-                mode: Shell.BlurMode.BACKGROUND,
-            });
-            this.menu.actor.add_effect(this._blurEffect);
+            if (menu.box._prBlurEffect) {
+                menu.box.remove_effect(menu.box._prBlurEffect);
+                menu.box._prBlurEffect = null;
+            }
+
+            if (targetClass)
+                menu.box.add_style_class_name(targetClass);
+
+            if (themeName === 'glass') {
+                // `Shell.BlurEffect` não tem propriedade `sigma` nesta versão
+                // (Shell-18/GNOME 50) — é `radius` (gint). Usar `sigma` faz o
+                // construtor lançar exceção, o que derruba a extensão inteira
+                // (GNOME Shell destrói o objeto que lançou a exceção).
+                menu.box._prBlurEffect = new Shell.BlurEffect({
+                    brightness: 0.85,
+                    radius: 30,
+                    mode: Shell.BlurMode.BACKGROUND,
+                });
+                menu.box.add_effect(menu.box._prBlurEffect);
+            }
         }
         // 'auto' não adiciona classe nenhuma — comportamento padrão do sistema.
     }
@@ -508,14 +589,27 @@ class Indicator extends PanelMenu.Button {
             ]);
 
             const itemsBySection = {review: needsReview, mine};
-            const visibleIds = effectiveOrder(this._settingsStore.getSectionsConfig());
+            const sectionsConfig = this._settingsStore.getSectionsConfig();
+            const visibleIds = effectiveOrder(sectionsConfig);
+            const reviewVisible = visibleIds.includes('review');
+            const mineVisible = visibleIds.includes('mine');
 
-            this._reviewSection.actor.get_parent().visible = visibleIds.includes('review');
-            this._mineSection.actor.get_parent().visible = visibleIds.includes('mine');
+            this._applySectionsOrder(sectionsConfig);
+
+            // Cada bloco controla sua própria visibilidade, incluindo título,
+            // lista e separador, sem afetar a outra seção.
+            this._reviewTitle.visible = reviewVisible;
+            this._reviewSection.actor.visible = reviewVisible;
+            this._reviewSeparator.actor.visible = reviewVisible;
+            this._mineTitle.visible = mineVisible;
+            this._mineSection.actor.visible = mineVisible;
+            this._mineSeparator.actor.visible = mineVisible;
 
             this._fillSection(this._reviewSection, itemsBySection.review ?? []);
             this._fillSection(this._mineSection, itemsBySection.mine ?? []);
-            this._countLabel.text = String(needsReview.length);
+
+            const badgeSection = this._settingsStore.getBadgeSection();
+            this._countLabel.text = String((itemsBySection[badgeSection] ?? needsReview).length);
 
             const now = GLib.DateTime.new_now_local().format('%H:%M');
             this._statusItem.label.text = `Atualizado às ${now}`;
@@ -526,11 +620,31 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
+    _applySectionsOrder(sectionsConfig) {
+        const blocks = {
+            review: this._reviewBlock,
+            mine: this._mineBlock,
+        };
+        let anchor = this._refreshItem.actor;
+
+        for (let index = sectionsConfig.length - 1; index >= 0; index--) {
+            const block = blocks[sectionsConfig[index].id];
+            if (!block)
+                continue;
+
+            this._prView.box.set_child_above_sibling(block, anchor);
+            anchor = block;
+        }
+    }
+
     destroy() {
+        this._endDrag();
         if (this._timeoutId) {
             GLib.source_remove(this._timeoutId);
             this._timeoutId = null;
         }
+        this._configMenu?.destroy();
+        this._configMenu = null;
         super.destroy();
     }
 });

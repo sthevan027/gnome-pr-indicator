@@ -1,7 +1,8 @@
-
 <img src="icons/github-symbolic.svg" width="48" height="48" alt="Ícone do PR Indicator">
 
 # PR Indicator
+
+![1790030950895](image/README/1790030950895.png)
 
 Extensão do **GNOME Shell** que mostra na barra superior os *pull requests*
 esperando a sua revisão e os seus PRs próprios abertos no GitHub. Clique no
