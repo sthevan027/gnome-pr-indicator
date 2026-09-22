@@ -28,3 +28,95 @@
     opacity: 0.6;
     font-size: 0.85em;
 }
+
+.pr-indicator-config-row {
+    padding: 4px 12px;
+}
+
+.pr-indicator-config-row-hidden {
+    opacity: 0.45;
+}
+
+.pr-indicator-drag-handle {
+    icon-size: 16px;
+    padding-right: 6px;
+}
+
+.pr-indicator-toggle-button {
+    font-weight: bold;
+    padding: 0 8px;
+    min-width: 24px;
+}
+
+.pr-indicator-settings-button {
+    padding: 0 6px;
+    border-radius: 999px;
+}
+
+.pr-indicator-settings-button:hover,
+.pr-indicator-settings-button:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.pr-indicator-theme-option {
+    padding: 4px 12px;
+}
+
+.pr-indicator-theme-check {
+    icon-size: 16px;
+    padding-right: 8px;
+}
+
+.pr-indicator-theme-white {
+    background-color: #ffffff;
+    color: #1a1a1a;
+}
+
+.pr-indicator-theme-black {
+    background-color: #101010;
+    color: #f2f2f2;
+}
+
+.pr-indicator-theme-glass {
+    background-color: rgba(20, 20, 20, 0.55);
+    color: #f2f2f2;
+}
+
+/*
+ * O tema do sistema define cor em seletores que batem direto no item
+ * (ex.: `.popup-menu-item { color: #afafaf }`), o que sempre vence sobre
+ * a cor herdada do container — por isso a troca de tema sozinha não
+ * bastava pra deixar o texto (e o ícone de seleção do tema) legível.
+ * Aqui a cor é fixada explicitamente por tema em cada elemento nosso,
+ * com um seletor mais específico (duas classes) que o do tema do sistema.
+ */
+.pr-indicator-theme-white .popup-menu-item,
+.pr-indicator-theme-white .pr-indicator-item-title,
+.pr-indicator-theme-white .pr-indicator-item-repo,
+.pr-indicator-theme-white .pr-indicator-section-title,
+.pr-indicator-theme-white .pr-indicator-empty,
+.pr-indicator-theme-white .pr-indicator-theme-check,
+.pr-indicator-theme-white .pr-indicator-drag-handle {
+    color: #1a1a1a;
+}
+
+.pr-indicator-theme-black .popup-menu-item,
+.pr-indicator-theme-black .pr-indicator-item-title,
+.pr-indicator-theme-black .pr-indicator-item-repo,
+.pr-indicator-theme-black .pr-indicator-section-title,
+.pr-indicator-theme-black .pr-indicator-empty,
+.pr-indicator-theme-black .pr-indicator-theme-check,
+.pr-indicator-theme-black .pr-indicator-drag-handle,
+.pr-indicator-theme-glass .popup-menu-item,
+.pr-indicator-theme-glass .pr-indicator-item-title,
+.pr-indicator-theme-glass .pr-indicator-item-repo,
+.pr-indicator-theme-glass .pr-indicator-section-title,
+.pr-indicator-theme-glass .pr-indicator-empty,
+.pr-indicator-theme-glass .pr-indicator-theme-check,
+.pr-indicator-theme-glass .pr-indicator-drag-handle {
+    color: #f2f2f2;
+}
+
+.pr-indicator-token-entry {
+    margin: 4px 12px;
+}

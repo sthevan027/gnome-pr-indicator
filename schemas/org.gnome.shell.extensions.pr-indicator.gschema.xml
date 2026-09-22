@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="pr-indicator">
+  <schema id="org.gnome.shell.extensions.pr-indicator" path="/org/gnome/shell/extensions/pr-indicator/">
+    <key name="sections" type="as">
+      <default>['review', 'mine']</default>
+      <summary>Ordem das seções</summary>
+      <description>Ids das seções do popup, na ordem em que devem aparecer</description>
+    </key>
+    <key name="hidden-sections" type="as">
+      <default>[]</default>
+      <summary>Seções ocultas</summary>
+      <description>Ids das seções que não devem aparecer na lista de PRs</description>
+    </key>
+    <key name="theme" type="s">
+      <default>'auto'</default>
+      <summary>Tema do popup</summary>
+      <description>Um de: auto, white, black, glass</description>
+    </key>
+    <key name="badge-section" type="s">
+      <default>'review'</default>
+      <summary>Seção que o indicador acompanha</summary>
+      <description>Qual seção o número no painel superior reflete: review ou mine</description>
+    </key>
+  </schema>
+</schemalist>
