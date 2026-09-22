@@ -52,6 +52,8 @@ logout/login.
 Clique em "⚙ Configurações", no final da lista, pra abrir o painel — ele
 substitui a lista de PRs dentro do mesmo popup ("← Voltar" retorna).
 
+![Painel de configuração do PR Indicator](screenshots/config-panel.png)
+
 - **Ordem e visibilidade das seções:** arraste pela alça (`⋮⋮`) pra
   reordenar; use `−`/`+` pra ocultar/mostrar uma seção sem perder a
   posição dela.
