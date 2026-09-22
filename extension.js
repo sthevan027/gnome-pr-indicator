@@ -129,18 +129,8 @@ class Indicator extends PanelMenu.Button {
             style_class: 'pr-indicator-count',
             y_align: 2,
         });
-        this._settingsButton = new St.Button({
-            style_class: 'pr-indicator-settings-button',
-            can_focus: true,
-            y_align: 2,
-        });
-        this._settingsButton.set_child(new St.Icon({
-            icon_name: 'emblem-system-symbolic',
-            style_class: 'popup-menu-icon',
-        }));
         box.add_child(this._icon);
         box.add_child(this._countLabel);
-        box.add_child(this._settingsButton);
         this.add_child(box);
 
         this._prView = new PopupMenu.PopupMenuSection();
@@ -163,37 +153,55 @@ class Indicator extends PanelMenu.Button {
         this._mineBlock.add_child(this._mineSeparator.actor);
         this._prView.box.add_child(this._mineBlock);
 
-        const refreshItem = new PopupMenu.PopupMenuItem('Atualizar agora');
-        refreshItem.connect('activate', () => this.refresh());
-        this._prView.addMenuItem(refreshItem);
-        this._refreshItem = refreshItem;
+        const refreshRow = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        const refreshRowBox = new St.BoxLayout({x_expand: true, y_align: 2 /* Clutter.ActorAlign.CENTER */});
+        const refreshButton = new St.Button({
+            style_class: 'popup-menu-item',
+            x_expand: true,
+            can_focus: true,
+            label: 'Atualizar agora',
+        });
+        refreshButton.connect('clicked', () => this.refresh());
+        const settingsButton = new St.Button({
+            style_class: 'pr-indicator-settings-button',
+            can_focus: true,
+            y_align: 2,
+        });
+        settingsButton.set_child(new St.Icon({
+            icon_name: 'emblem-system-symbolic',
+            style_class: 'popup-menu-icon',
+        }));
+        settingsButton.connect('clicked', () => this._showConfigView());
+        refreshRowBox.add_child(refreshButton);
+        refreshRowBox.add_child(settingsButton);
+        refreshRow.add_child(refreshRowBox);
+        this._prView.addMenuItem(refreshRow);
+        this._refreshItem = refreshRow;
 
         this._statusItem = new PopupMenu.PopupMenuItem('', {reactive: false, style_class: 'pr-indicator-empty'});
         this._prView.addMenuItem(this._statusItem);
 
         this.menu.addMenuItem(this._prView);
 
-        // Popup de configuração é independente do popup de PRs — preso ao
-        // botão de engrenagem, não ao indicador inteiro — pra não inchar a
-        // lista de PRs com a tela de config inteira.
-        this._configMenu = new PopupMenu.PopupMenu(this._settingsButton, 0.5, St.Side.TOP);
-        this._configMenu.actor.add_style_class_name('panel-menu');
-        Main.layoutManager.addTopChrome(this._configMenu.actor);
-        this._configMenu.actor.hide();
-        Main.panel.menuManager.addMenu(this._configMenu);
-        this._settingsButton.connect('clicked', () => this._configMenu.toggle());
+        this._configView = new PopupMenu.PopupMenuSection();
+        this._configView.actor.visible = false;
+        this.menu.addMenuItem(this._configView);
 
-        this._configMenu.box.add_child(this._sectionTitle('Ordem e visibilidade das seções'));
-        this._configMenu.addMenuItem(this._buildSectionsOrderRows());
+        const backItem = new PopupMenu.PopupMenuItem('← Voltar');
+        backItem.connect('activate', () => this._showPRView());
+        this._configView.addMenuItem(backItem);
 
-        this._configMenu.box.add_child(this._sectionTitle('O indicador acompanha'));
-        this._configMenu.addMenuItem(this._buildBadgeSection());
+        this._configView.box.add_child(this._sectionTitle('Ordem e visibilidade das seções'));
+        this._configView.addMenuItem(this._buildSectionsOrderRows());
 
-        this._configMenu.box.add_child(this._sectionTitle('Tema'));
-        this._configMenu.addMenuItem(this._buildThemeSection());
+        this._configView.box.add_child(this._sectionTitle('O indicador acompanha'));
+        this._configView.addMenuItem(this._buildBadgeSection());
 
-        this._configMenu.box.add_child(this._sectionTitle('Autenticação'));
-        this._configMenu.addMenuItem(this._buildAuthSection());
+        this._configView.box.add_child(this._sectionTitle('Tema'));
+        this._configView.addMenuItem(this._buildThemeSection());
+
+        this._configView.box.add_child(this._sectionTitle('Autenticação'));
+        this._configView.addMenuItem(this._buildAuthSection());
 
         this._applyTheme(this._settingsStore.getTheme());
 
@@ -215,6 +223,16 @@ class Indicator extends PanelMenu.Button {
         const wrapper = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
         wrapper.add_child(this._sectionsOrderContainer);
         return wrapper;
+    }
+
+    _showConfigView() {
+        this._prView.actor.visible = false;
+        this._configView.actor.visible = true;
+    }
+
+    _showPRView() {
+        this._configView.actor.visible = false;
+        this._prView.actor.visible = true;
     }
 
     _makeSectionRow(section) {
@@ -439,7 +457,7 @@ class Indicator extends PanelMenu.Button {
             glass: 'pr-indicator-theme-glass',
         }[themeName];
 
-        for (const menu of [this.menu, this._configMenu]) {
+        for (const menu of [this.menu]) {
             for (const cls of classes)
                 menu.box.remove_style_class_name(cls);
 
@@ -643,8 +661,6 @@ class Indicator extends PanelMenu.Button {
             GLib.source_remove(this._timeoutId);
             this._timeoutId = null;
         }
-        this._configMenu?.destroy();
-        this._configMenu = null;
         super.destroy();
     }
 });
