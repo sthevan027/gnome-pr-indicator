@@ -27,8 +27,13 @@ export function computePopupPosition(tray, size, workArea) {
     if (tray.y + tray.height <= top)
         return {x: clampX(centerX - size.width / 2), y: top + GAP};
 
-    // Barra embaixo (padrão do Windows) ou ícone dentro da área de
-    // transbordamento: abre pra cima.
-    const y = tray.y >= bottom ? bottom - size.height - GAP : tray.y - size.height - GAP;
+    if (tray.y >= bottom)
+        return {x: clampX(centerX - size.width / 2), y: clampY(bottom - size.height - GAP)};
+
+    // Ícone dentro da área útil (flyout do `^`): abre do lado que tem mais
+    // espaço, sem cobrir o ícone.
+    const above = tray.y - top;
+    const below = bottom - (tray.y + tray.height);
+    const y = below > above ? tray.y + tray.height + GAP : tray.y - size.height - GAP;
     return {x: clampX(centerX - size.width / 2), y: clampY(y)};
 }

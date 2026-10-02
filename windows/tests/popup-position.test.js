@@ -38,6 +38,19 @@ test('barra na direita: abre à esquerda, alinhado ao ícone', () => {
     assert.equal(pos.y, 900 + 12 - 150);
 });
 
+test('barra em cima com ícone no flyout do ^: abre abaixo do ícone', () => {
+    const top = {x: 0, y: 32, width: 1920, height: 1048};
+    const tray = {x: 1646, y: 49, width: 40, height: 40};
+    const pos = computePopupPosition(tray, {width: 360, height: 518}, top);
+    assert.equal(pos.y, 49 + 40 + GAP);
+});
+
+test('barra embaixo com ícone no flyout do ^: abre acima do ícone', () => {
+    const tray = {x: 1646, y: 950, width: 40, height: 40};
+    const pos = computePopupPosition(tray, size, workArea);
+    assert.equal(pos.y, 950 - 300 - GAP);
+});
+
 test('popup mais alto que a tela gruda no topo', () => {
     const tray = {x: 1700, y: 1040, width: 24, height: 32};
     assert.equal(computePopupPosition(tray, {width: 380, height: 2000}, workArea).y, GAP);

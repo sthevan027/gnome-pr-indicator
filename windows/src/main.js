@@ -38,6 +38,12 @@ if (autostart !== null) {
 } else if (!app.requestSingleInstanceLock()) {
     app.exit(0);
 } else {
+    // Abrir o app de novo (atalho, autostart duplicado) mostra o popup em
+    // vez de não fazer nada.
+    app.on('second-instance', () => {
+        if (popup && tray && !popup.isVisible())
+            togglePopup();
+    });
     app.whenReady().then(start);
 }
 
