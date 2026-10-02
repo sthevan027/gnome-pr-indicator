@@ -48,8 +48,11 @@ function renderSections(state) {
         container.append(el('div', 'pr-indicator-section-title', SECTION_LABELS[section.id] ?? section.id));
 
         const items = state.items?.[section.id] ?? [];
+        // Como no GNOME, "Nada por aqui" só aparece depois de uma busca que
+        // deu certo — em erro (ou antes da 1ª carga) a seção fica vazia.
         if (items.length === 0) {
-            container.append(el('div', 'popup-menu-item pr-indicator-empty', 'Nada por aqui'));
+            if (state.loaded)
+                container.append(el('div', 'popup-menu-item pr-indicator-empty', 'Nada por aqui'));
         } else {
             for (const item of items) {
                 const button = el('button', 'pr-item');
@@ -75,6 +78,7 @@ function renderStatus(state) {
         status.textContent = `Atualizado às ${state.updatedAt}`;
     else
         status.textContent = '';
+    status.title = status.textContent;
 }
 
 // ---- configuração ----
@@ -166,16 +170,18 @@ function renderOptions(containerId, options, selected, onSelect) {
 function renderAuth(state) {
     const entry = $('token');
     entry.disabled = state.ghAuth;
-    $('auth-status').textContent = state.ghAuth
+    const authStatus = $('auth-status');
+    authStatus.textContent = state.ghAuth
         ? '✓ Usando gh CLI (autenticado)'
         : 'gh CLI não encontrado — configure um token manual abaixo';
+    authStatus.title = authStatus.textContent;
 }
 
 // ---- geral ----
 
 function render(state) {
     current = state;
-    document.body.className = `theme-${state.effectiveTheme}`;
+    document.body.className = `theme-${state.effectiveTheme} ${state.systemDark ? 'system-dark' : 'system-light'}`;
     renderSections(state);
     renderStatus(state);
     if (!dragging)

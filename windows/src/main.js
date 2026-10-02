@@ -63,6 +63,8 @@ const state = {
     items: {review: [], mine: []},
     updatedAt: null,
     ghAuth: false,
+    // true depois de uma busca que deu certo; volta a false no erro de auth.
+    loaded: false,
 };
 
 function execGh() {
@@ -160,6 +162,8 @@ function viewState() {
         effectiveTheme: effectiveTheme(),
         badgeSection: store.getBadgeSection(),
         ghAuth: state.ghAuth,
+        loaded: state.loaded,
+        systemDark: nativeTheme.shouldUseDarkColors,
     };
 }
 
@@ -187,6 +191,7 @@ function formatTime(date) {
 async function refreshOnce() {
     try {
         state.items = await client.fetchAll();
+        state.loaded = true;
         state.status = 'ok';
         state.error = null;
         state.updatedAt = formatTime(new Date());
@@ -197,6 +202,7 @@ async function refreshOnce() {
         // rate limit) mantém a última lista boa.
         if (e instanceof AuthError)
             state.items = {review: [], mine: []};
+            state.loaded = false;
         console.error('pr-indicator: refresh failed', e);
     }
     state.ghAuth = client.lastTokenSource === 'gh';
@@ -390,7 +396,12 @@ async function start() {
 
     if (process.env.PR_INDICATOR_SNAPSHOT) {
         await firstRefresh;
-        await snapshot(process.env.PR_INDICATOR_SNAPSHOT);
+        try {
+            await snapshot(process.env.PR_INDICATOR_SNAPSHOT);
+        } catch (e) {
+            console.error('pr-indicator: snapshot falhou', e);
+            app.exit(1);
+        }
         app.exit(0);
     }
 }
