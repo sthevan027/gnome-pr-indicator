@@ -55,9 +55,13 @@ Ficam em `%APPDATA%\PR Indicator\`:
   `safeStorage`). Nunca fica em texto plano. Só é usado se o `gh` CLI não
   estiver autenticado.
 
-Diferença em relação ao GNOME: quando falha só a rede ou a API (timeout,
-5xx, rate limit), o popup **mantém a última lista boa** e só a linha de
-status mostra o erro. Quando a falha é de autenticação, a lista é limpa.
+Erros: como no GNOME, uma falha de rede ou da API (timeout, 5xx, rate
+limit) mantém a última lista boa, e só a linha de status mostra o erro.
+A diferença é a falha de **autenticação** (sem `gh` e sem token, ou token
+revogado): nesse caso a lista é limpa.
+
+A rede usa a pilha do Chromium (`net.fetch`), então respeita o proxy e os
+certificados configurados no Windows.
 
 ## Estrutura
 

@@ -41,6 +41,8 @@ export class GitHubClient {
         this._execGh = execGh;
         this._getManualToken = getManualToken;
         this._fetch = fetchImpl;
+        /** De onde veio o token na última busca: 'gh', 'manual' ou null. */
+        this.lastTokenSource = null;
     }
 
     async _ghToken() {
@@ -57,7 +59,9 @@ export class GitHubClient {
     }
 
     async resolveToken() {
-        const token = (await this._ghToken()) ?? this._getManualToken();
+        const gh = await this._ghToken();
+        const token = gh ?? this._getManualToken();
+        this.lastTokenSource = gh ? 'gh' : token ? 'manual' : null;
         if (!token)
             throw new AuthError('sem token (rode "gh auth login" ou configure um token manual)');
         return token;

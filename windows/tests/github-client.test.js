@@ -79,6 +79,36 @@ test('500 vira erro comum com o status', async () => {
         err => !(err instanceof AuthError) && /500/.test(err.message));
 });
 
+test('lastTokenSource indica de onde veio o token', async () => {
+    const viaGh = client();
+    await viaGh.fetchAll();
+    assert.equal(viaGh.lastTokenSource, 'gh');
+
+    let auth;
+    const viaManual = client({
+        gh: async () => { throw new Error('x'); },
+        manual: 'ghp_manual',
+        fetchImpl: async (_url, opts) => { auth = opts.headers.Authorization; return ok({items: []}); },
+    });
+    await viaManual.fetchAll();
+    assert.equal(viaManual.lastTokenSource, 'manual');
+    assert.equal(auth, 'Bearer ghp_manual');
+
+    const semToken = client({gh: async () => { throw new Error('x'); }});
+    await assert.rejects(semToken.fetchAll(), AuthError);
+    assert.equal(semToken.lastTokenSource, null);
+});
+
+test('falha de rede não vira AuthError', async () => {
+    const c = client({fetchImpl: async () => { throw new TypeError('fetch failed'); }});
+    await assert.rejects(c.fetchAll(), err => !(err instanceof AuthError));
+});
+
+test('403 (rate limit) não vira AuthError', async () => {
+    await assert.rejects(client({fetchImpl: async () => status(403)}).fetchAll(),
+        err => !(err instanceof AuthError) && /403/.test(err.message));
+});
+
 test('validateToken devolve o login', async () => {
     const c = client({fetchImpl: async url => {
         assert.ok(url.endsWith('/user'));

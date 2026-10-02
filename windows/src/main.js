@@ -1,10 +1,10 @@
-import {app, BrowserWindow, ipcMain, nativeImage, nativeTheme, safeStorage, screen, shell, Tray} from 'electron';
-import {execFile} from 'node:child_process';
+import {app, BrowserWindow, ipcMain, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, Tray} from 'electron';
+import {exec} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {toggleHidden} from '../../lib/sectionsConfig.js';
+import {DEFAULT_SECTION_IDS, toggleHidden} from '../../lib/sectionsConfig.js';
 import {loginItemSettings, parseAutostartArg} from './autostart.js';
 import {badgeText, isInside, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
@@ -14,6 +14,7 @@ import {applySectionOrder, electronCrypto, SettingsStore} from './settings-store
 const POLL_SECONDS = 60;
 const POPUP_WIDTH = 360;
 const HOVER_CHECK_MS = 150;
+const THEMES = ['auto', 'white', 'black', 'glass'];
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const GITHUB_ICON_PATH = fs.readFileSync(path.join(here, '..', '..', 'icons', 'github-symbolic.svg'), 'utf8')
@@ -47,7 +48,12 @@ let client = null;
 let lastHiddenAt = 0;
 let hovering = false;
 let hoverTimer = null;
-let iconImages = {};
+// Cache das imagens da bandeja: a chave inclui a cor e o valor é a Promise,
+// assim renders simultâneos da mesma imagem não se duplicam.
+const iconImages = new Map();
+// Cada updateTray ganha um número; só o mais recente aplica a imagem, pra um
+// render lento não sobrescrever um estado mais novo.
+let trayGeneration = 0;
 let popupHeight = 300;
 
 // status: 'loading' | 'ok' | 'error'
@@ -61,7 +67,8 @@ const state = {
 
 function execGh() {
     return new Promise((resolve, reject) => {
-        execFile('gh', ['auth', 'token'], {windowsHide: true, timeout: 10000}, (err, stdout) => {
+        // Via shell (exec) pra achar também o gh instalado como shim .cmd (scoop etc.).
+        exec('gh auth token', {windowsHide: true, timeout: 10000}, (err, stdout) => {
             if (err)
                 reject(err);
             else
@@ -81,8 +88,8 @@ function effectiveTheme() {
     return nativeTheme.shouldUseDarkColors ? 'auto-dark' : 'auto-light';
 }
 
-async function renderImage(kind, text = '') {
-    const args = {kind, text, path: GITHUB_ICON_PATH, color: trayIsDark() ? '#ffffff' : '#1a1a1a'};
+async function renderImage(kind, text, color) {
+    const args = {kind, text, path: GITHUB_ICON_PATH, color};
     const urls = await popup.webContents.executeJavaScript(`window.renderTrayIcon(${JSON.stringify(args)})`);
     const image = nativeImage.createEmpty();
     for (const {scale, dataUrl} of urls)
@@ -90,10 +97,15 @@ async function renderImage(kind, text = '') {
     return image;
 }
 
-async function imageFor(key, kind, text) {
-    if (!iconImages[key])
-        iconImages[key] = await renderImage(kind, text);
-    return iconImages[key];
+function imageFor(kind, text = '') {
+    const color = trayIsDark() ? '#ffffff' : '#1a1a1a';
+    const key = `${kind}:${text}:${color}`;
+    if (!iconImages.has(key)) {
+        const promise = renderImage(kind, text, color);
+        promise.catch(() => iconImages.delete(key));
+        iconImages.set(key, promise);
+    }
+    return iconImages.get(key);
 }
 
 function badgeState() {
@@ -109,14 +121,12 @@ function badgeState() {
 async function updateTray() {
     if (!tray)
         return;
+    const generation = ++trayGeneration;
     const badge = badgeState();
     tray.setToolTip(tooltipText(badge));
-    if (hovering) {
-        const text = badgeText(badge);
-        tray.setImage(await imageFor(`text:${text}`, 'text', text));
-    } else {
-        tray.setImage(await imageFor('icon', 'icon'));
-    }
+    const image = hovering ? await imageFor('text', badgeText(badge)) : await imageFor('icon');
+    if (generation === trayGeneration && tray)
+        tray.setImage(image);
 }
 
 function stopHover() {
@@ -174,27 +184,40 @@ function formatTime(date) {
     return date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
 }
 
+async function refreshOnce() {
+    try {
+        state.items = await client.fetchAll();
+        state.status = 'ok';
+        state.error = null;
+        state.updatedAt = formatTime(new Date());
+    } catch (e) {
+        state.status = 'error';
+        state.error = e.message;
+        // Falha de autenticação limpa a lista; falha pontual (rede, 5xx,
+        // rate limit) mantém a última lista boa.
+        if (e instanceof AuthError)
+            state.items = {review: [], mine: []};
+        console.error('pr-indicator: refresh failed', e);
+    }
+    state.ghAuth = client.lastTokenSource === 'gh';
+    pushState();
+}
+
 let refreshing = null;
+let refreshPending = false;
 async function refresh() {
-    if (refreshing)
+    // Pedido durante outro refresh (token acabou de ser salvo, "Atualizar
+    // agora" num fetch lento): roda mais uma vez no fim em vez de devolver
+    // um resultado de antes do pedido.
+    if (refreshing) {
+        refreshPending = true;
         return refreshing;
+    }
     refreshing = (async () => {
-        state.ghAuth = await client.hasValidGhAuth();
-        try {
-            state.items = await client.fetchAll();
-            state.status = 'ok';
-            state.error = null;
-            state.updatedAt = formatTime(new Date());
-        } catch (e) {
-            state.status = 'error';
-            state.error = e.message;
-            // Falha de autenticação limpa a lista; falha pontual (rede, 5xx,
-            // rate limit) mantém a última lista boa.
-            if (e instanceof AuthError)
-                state.items = {review: [], mine: []};
-            console.error('pr-indicator: refresh failed', e);
-        }
-        pushState();
+        do {
+            refreshPending = false;
+            await refreshOnce();
+        } while (refreshPending);
     })();
     try {
         await refreshing;
@@ -206,7 +229,9 @@ async function refresh() {
 function positionPopup() {
     const bounds = tray.getBounds();
     const display = screen.getDisplayNearestPoint({x: bounds.x, y: bounds.y});
-    const size = {width: POPUP_WIDTH, height: popupHeight};
+    // Se o conteúdo não couber, a janela fica do tamanho da área útil e o
+    // popup ganha rolagem.
+    const size = {width: POPUP_WIDTH, height: Math.min(popupHeight, display.workArea.height - 16)};
     const {x, y} = computePopupPosition(bounds, size, display.workArea);
     popup.setBounds({x, y, ...size});
 }
@@ -248,6 +273,8 @@ function createPopup() {
         },
     });
     popup.setMenu(null);
+    popup.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
+    popup.webContents.on('will-navigate', event => event.preventDefault());
     popup.on('blur', () => {
         if (popup.isVisible()) {
             popup.hide();
@@ -258,30 +285,47 @@ function createPopup() {
     return popup.loadFile(path.join(here, 'renderer', 'popup.html'));
 }
 
+function isGitHubUrl(value) {
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && url.host === 'github.com';
+    } catch {
+        return false;
+    }
+}
+
 function registerIpc() {
     ipcMain.handle('get-state', () => viewState());
     ipcMain.on('refresh', () => refresh());
     ipcMain.on('hide', () => popup.hide());
     ipcMain.on('open-url', (_e, url) => {
-        if (typeof url === 'string' && url.startsWith('https://github.com/')) {
+        if (isGitHubUrl(url)) {
             shell.openExternal(url);
             popup.hide();
         }
     });
     ipcMain.on('toggle-section', (_e, id) => {
+        if (!DEFAULT_SECTION_IDS.includes(id))
+            return;
         store.setSectionsConfig(toggleHidden(store.getSectionsConfig(), id));
         pushState();
     });
     ipcMain.on('commit-section-order', (_e, orderedIds) => {
+        if (!Array.isArray(orderedIds) || !orderedIds.every(id => DEFAULT_SECTION_IDS.includes(id)))
+            return;
         store.setSectionsConfig(applySectionOrder(store.getSectionsConfig(), orderedIds));
         pushState();
     });
     ipcMain.on('set-theme', (_e, name) => {
+        if (!THEMES.includes(name))
+            return;
         store.setTheme(name);
         applyWindowMaterial();
         pushState();
     });
     ipcMain.on('set-badge-section', (_e, id) => {
+        if (!DEFAULT_SECTION_IDS.includes(id))
+            return;
         store.setBadgeSection(id);
         pushState();
     });
@@ -322,21 +366,23 @@ async function start() {
     store = new SettingsStore(app.getPath('userData'), electronCrypto(safeStorage));
     client = process.env.PR_INDICATOR_FAKE
         ? fakeClient(process.env.PR_INDICATOR_FAKE)
-        : new GitHubClient({execGh, getManualToken: () => store.getToken()});
+        // net.fetch usa a pilha de rede do Chromium: respeita o proxy e os
+        // certificados do Windows (o fetch do Node ignora os dois).
+        : new GitHubClient({execGh, getManualToken: () => store.getToken(), fetchImpl: net.fetch});
 
     registerIpc();
     await createPopup();
 
-    tray = new Tray(await imageFor('icon', 'icon'));
+    tray = new Tray(await imageFor('icon'));
     tray.setToolTip('PR Indicator');
     tray.on('click', togglePopup);
     tray.on('right-click', togglePopup);
     tray.on('mouse-move', onTrayMouseMove);
 
-    nativeTheme.on('updated', () => {
-        iconImages = {};
-        pushState();
-    });
+    // A cor do ícone faz parte da chave do cache, então basta redesenhar.
+    nativeTheme.on('updated', pushState);
+    // Ao voltar da suspensão a rede pode ter ficado em erro; não espera os 60s.
+    powerMonitor.on('resume', () => setTimeout(refresh, 5000));
 
     pushState();
     const firstRefresh = refresh();
@@ -352,9 +398,10 @@ async function start() {
 function fakeClient(file) {
     const read = () => JSON.parse(fs.readFileSync(file, 'utf8'));
     return {
-        hasValidGhAuth: async () => read().ghAuth ?? true,
-        fetchAll: async () => {
+        lastTokenSource: null,
+        async fetchAll() {
             const data = read();
+            this.lastTokenSource = (data.ghAuth ?? true) ? 'gh' : 'manual';
             if (data.error === 'auth')
                 throw new AuthError('sem token (rode "gh auth login" ou configure um token manual)');
             if (data.error)
@@ -375,9 +422,9 @@ async function snapshot(dir) {
     fs.mkdirSync(dir, {recursive: true});
     const save = (name, image) => fs.writeFileSync(path.join(dir, name), image.toPNG());
 
-    save('tray-icon.png', (await imageFor('icon', 'icon')).resize({width: 32, height: 32}));
+    save('tray-icon.png', (await imageFor('icon')).resize({width: 32, height: 32}));
     const text = badgeText(badgeState());
-    save('tray-hover.png', (await imageFor(`text:${text}`, 'text', text)).resize({width: 32, height: 32}));
+    save('tray-hover.png', (await imageFor('text', text)).resize({width: 32, height: 32}));
     fs.writeFileSync(path.join(dir, 'tooltip.txt'), tooltipText(badgeState()));
 
     positionPopup();

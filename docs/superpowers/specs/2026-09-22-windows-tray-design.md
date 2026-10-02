@@ -69,13 +69,12 @@ Igual ao GNOME:
   Senão, o token é validado em `/user` antes de salvar, com feedback "✓
   conectado como X" ou "✗ token inválido…".
 
-Uma diferença vinda do plano de 22/09: o GNOME mostra `!` e
-`Erro: ...` em qualquer falha. No Windows:
-
-- Falha de autenticação (`AuthError`: sem `gh` e sem token, ou HTTP 401):
-  as listas são limpas, aparece `!` e `Erro: ...`.
-- Falha pontual de rede ou de API: **mantém a última lista boa**, só a
-  linha de status mostra o erro.
+Em qualquer falha, o GNOME mostra `!` e `Erro: ...` e mantém a última lista
+(o `_fillSection` só roda no sucesso). O Windows faz o mesmo para falhas
+pontuais de rede ou de API. A diferença, vinda do plano de 22/09, é a
+falha de autenticação (`AuthError`: sem `gh` e sem token, ou HTTP 401):
+nesse caso **as listas são limpas**, pra não mostrar PRs de uma sessão
+que não vale mais.
 
 ## Fora de escopo (v1)
 

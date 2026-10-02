@@ -22,6 +22,9 @@ const HANDLE_SVG = '<svg viewBox="0 0 16 16" class="icon" aria-hidden="true"><pa
 
 const $ = id => document.getElementById(id);
 let current = null;
+// Enquanto uma linha é arrastada, um estado novo (polling, tema do Windows)
+// não pode reconstruir a lista de seções, senão o arraste se perde.
+let dragging = false;
 
 function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -108,6 +111,7 @@ function attachDrag(handle, row, container) {
         event.preventDefault();
         handle.setPointerCapture(event.pointerId);
         row.classList.add('dragging');
+        dragging = true;
         let lastY = event.clientY;
         const initialOrder = [...container.children].map(r => r.dataset.sectionId);
 
@@ -130,9 +134,12 @@ function attachDrag(handle, row, container) {
             handle.removeEventListener('pointerup', onUp);
             handle.removeEventListener('pointercancel', onUp);
             row.classList.remove('dragging');
+            dragging = false;
             const order = [...container.children].map(r => r.dataset.sectionId);
             if (order.join() !== initialOrder.join())
                 api.commitSectionOrder(order);
+            else if (current)
+                renderSectionsOrder(current);
         };
 
         handle.addEventListener('pointermove', onMove);
@@ -171,7 +178,8 @@ function render(state) {
     document.body.className = `theme-${state.effectiveTheme}`;
     renderSections(state);
     renderStatus(state);
-    renderSectionsOrder(state);
+    if (!dragging)
+        renderSectionsOrder(state);
     renderOptions('badge-options', BADGE_OPTIONS, state.badgeSection, api.setBadgeSection);
     renderOptions('theme-options', THEME_OPTIONS, state.theme, api.setTheme);
     renderAuth(state);
@@ -190,10 +198,16 @@ $('token').addEventListener('keydown', async event => {
     if (event.key !== 'Enter')
         return;
     const value = event.target.value.trim();
-    if (!value)
+    if (!value || event.target.readOnly)
         return;
     $('token-feedback').textContent = 'Validando…';
-    const result = await api.submitToken(value);
+    event.target.readOnly = true;
+    let result;
+    try {
+        result = await api.submitToken(value);
+    } finally {
+        event.target.readOnly = false;
+    }
     if (result) {
         $('token-feedback').textContent = result.message;
         if (result.ok)
