@@ -1,0 +1,281 @@
+/*
+ * Reprodução do popup da extensão GNOME. A base (.popup-menu-content,
+ * .popup-menu-item, separador) imita o tema padrão do GNOME Shell; as
+ * classes pr-indicator-* são as mesmas do stylesheet.css da extensão, com
+ * os mesmos valores.
+ */
+
+:root {
+    --bg: #212121;
+    --fg: #dedede;
+    --hover: rgba(255, 255, 255, 0.08);
+    --active: rgba(255, 255, 255, 0.14);
+    --separator: rgba(255, 255, 255, 0.1);
+    --entry-bg: rgba(255, 255, 255, 0.06);
+    --accent: #3584e4;
+    --accent-fg: #ffffff;
+}
+
+/* Automático no modo claro do Windows = variante clara do GNOME Shell. */
+body.theme-auto-light {
+    --bg: #fafafb;
+    --fg: #2e3436;
+    --hover: rgba(0, 0, 0, 0.06);
+    --active: rgba(0, 0, 0, 0.1);
+    --separator: rgba(0, 0, 0, 0.1);
+    --entry-bg: rgba(0, 0, 0, 0.05);
+}
+
+/* .pr-indicator-theme-white */
+body.theme-white {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --hover: rgba(0, 0, 0, 0.06);
+    --active: rgba(0, 0, 0, 0.1);
+    --separator: rgba(0, 0, 0, 0.1);
+    --entry-bg: rgba(0, 0, 0, 0.05);
+}
+
+/* .pr-indicator-theme-black */
+body.theme-black {
+    --bg: #101010;
+    --fg: #f2f2f2;
+}
+
+/* .pr-indicator-theme-glass — o blur vem do material acrílico da janela. */
+body.theme-glass {
+    --bg: rgba(20, 20, 20, 0.55);
+    --fg: #f2f2f2;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    user-select: none;
+}
+
+body {
+    font: 14px "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    cursor: default;
+}
+
+button,
+input {
+    font: inherit;
+    color: inherit;
+}
+
+.popup-menu-content {
+    padding: 6px 0;
+}
+
+.popup-menu-item {
+    display: block;
+    width: calc(100% - 12px);
+    margin: 0 6px;
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    text-align: left;
+    outline: none;
+}
+
+button.popup-menu-item:hover,
+.pr-item:hover {
+    background: var(--hover);
+}
+
+button.popup-menu-item:active,
+.pr-item:active {
+    background: var(--active);
+}
+
+button.popup-menu-item:focus-visible,
+.pr-item:focus-visible {
+    background: var(--accent);
+    color: var(--accent-fg);
+}
+
+.separator {
+    height: 1px;
+    margin: 6px 12px;
+    background: var(--separator);
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex: none;
+}
+
+/* ---- classes do stylesheet.css da extensão ---- */
+
+.pr-indicator-section-title {
+    font-weight: bold;
+    padding: 4px 12px 2px;
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+
+.pr-indicator-empty {
+    padding: 4px 12px;
+    opacity: 0.6;
+    font-style: italic;
+}
+
+.pr-indicator-item-title {
+    max-width: 320px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.pr-indicator-item-repo {
+    opacity: 0.6;
+    font-size: 0.85em;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.pr-indicator-config-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    margin: 0 6px;
+    border-radius: 9px;
+}
+
+.pr-indicator-config-row-hidden {
+    opacity: 0.45;
+}
+
+.pr-indicator-config-row.dragging {
+    background: var(--hover);
+}
+
+.pr-indicator-drag-handle {
+    padding-right: 6px;
+    cursor: grab;
+    display: flex;
+    touch-action: none;
+}
+
+.pr-indicator-config-row.dragging .pr-indicator-drag-handle {
+    cursor: grabbing;
+}
+
+.pr-indicator-config-row .label {
+    flex: 1;
+}
+
+.pr-indicator-toggle-button {
+    font-weight: bold;
+    padding: 0 8px;
+    min-width: 24px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+}
+
+.pr-indicator-toggle-button:hover {
+    background: var(--hover);
+}
+
+.pr-indicator-settings-button,
+.settings-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    margin-right: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    width: 30px;
+    height: 30px;
+}
+
+.settings-button:hover,
+.settings-button:focus-visible {
+    background-color: rgba(255, 255, 255, 0.1);
+    outline: none;
+}
+
+body.theme-white .settings-button:hover,
+body.theme-auto-light .settings-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.pr-indicator-theme-option {
+    display: flex;
+    align-items: center;
+    padding: 7px 12px;
+}
+
+.pr-indicator-theme-check {
+    width: 16px;
+    margin-right: 8px;
+    display: flex;
+}
+
+.pr-indicator-token-entry {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 4px 12px;
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--entry-bg);
+    outline: none;
+}
+
+.pr-indicator-token-entry:focus {
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.pr-indicator-token-entry:disabled {
+    opacity: 0.47;
+}
+
+.pr-indicator-token-entry::placeholder {
+    color: var(--fg);
+    opacity: 0.5;
+}
+
+/* ---- layout ---- */
+
+.refresh-row {
+    display: flex;
+    align-items: center;
+}
+
+.refresh-button {
+    flex: 1;
+}
+
+.pr-item {
+    display: block;
+    width: calc(100% - 12px);
+    margin: 0 6px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    text-align: left;
+    outline: none;
+}
+
+[hidden] {
+    display: none !important;
+}
