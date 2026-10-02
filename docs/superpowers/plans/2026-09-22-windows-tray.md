@@ -41,10 +41,11 @@ O renderer (`popup.html/css/js`) é só view. Ele recebe o estado por IPC e devo
 - `validateToken(token)` → login, via `/user`.
 - `repoNameFromItem` igual ao GNOME.
 
-### Task 4: Ícone com número (`badge.js` + render)
-- Pura (TDD): `badgeText({state, items, badgeSection})` → `'…' | '!' | 'N'`.
-- O render desenha o SVG do GitHub + o texto num canvas offscreen (1x e 2x pra DPI) e gera um `nativeImage` pra `tray.setImage`.
-- **Verificação:** o número aparece e muda com o "O indicador acompanha".
+### Task 4: Ícone ↔ número no hover (`badge.js` + `hover.js`)
+- Pura (TDD): `badgeText({status, count})` → `'…' | '!' | 'N' | '99+'`; `isInside(point, bounds)`.
+- Render: o texto em negrito/branco num canvas offscreen (16 e 32px pra DPI) → `nativeImage`; cache por texto.
+- Hover: `tray.on('mouse-move')` troca pra imagem do número e inicia a checagem do cursor (~150ms); saiu → volta o ícone e para a checagem. Clique abre/fecha o popup.
+- **Verificação:** passar o mouse → número; tirar → ícone; muda com "O indicador acompanha".
 
 ### Task 5: Janela do popup (`popup-position.js` TDD)
 - `computePopupPosition(trayBounds, size, workArea)` centraliza no ícone, abre pra cima com a barra embaixo e pra baixo com a barra em cima, sem sair da área útil.
