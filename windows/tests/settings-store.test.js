@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import {SettingsStore} from '../src/settings-store.js';
+import {applySectionOrder, electronCrypto, SettingsStore} from '../src/settings-store.js';
 
 // Cifra de mentira: só inverte e marca, o suficiente pra provar que o
 // token nunca vai pro disco em texto plano.
@@ -84,4 +84,25 @@ test('token: cifrado no disco, relido, apagado', () => {
 test('token: sem cifra disponível recusa salvar', () => {
     const store = new SettingsStore(tempDir(), {...fakeCrypto, isAvailable: () => false});
     assert.throws(() => store.setToken('x'));
+});
+
+test('electronCrypto adapta a API real do safeStorage', () => {
+    const safeStorage = {
+        isEncryptionAvailable: () => true,
+        encryptString: text => Buffer.from(`x${text}`),
+        decryptString: buf => buf.toString().slice(1),
+    };
+    const dir = tempDir();
+    const store = new SettingsStore(dir, electronCrypto(safeStorage));
+    store.setToken('abc');
+    assert.equal(new SettingsStore(dir, electronCrypto(safeStorage)).getToken(), 'abc');
+});
+
+test('applySectionOrder aplica a ordem do arraste e mantém hidden', () => {
+    const current = [{id: 'mine', hidden: false}, {id: 'review', hidden: true}];
+    assert.deepEqual(applySectionOrder(current, ['mine', 'review']), current);
+    assert.deepEqual(applySectionOrder(current, ['review', 'mine']),
+        [{id: 'review', hidden: true}, {id: 'mine', hidden: false}]);
+    assert.deepEqual(applySectionOrder(current, ['review', 'xx']),
+        [{id: 'review', hidden: true}, {id: 'mine', hidden: false}]);
 });

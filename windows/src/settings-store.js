@@ -13,6 +13,28 @@ const DEFAULTS = {
 };
 const THEMES = ['auto', 'white', 'black', 'glass'];
 
+/** Adapta o `safeStorage` do Electron pra interface que o store usa. */
+export function electronCrypto(safeStorage) {
+    return {
+        isAvailable: () => safeStorage.isEncryptionAvailable(),
+        encrypt: text => safeStorage.encryptString(text),
+        decrypt: buffer => safeStorage.decryptString(buffer),
+    };
+}
+
+/**
+ * Monta a lista de seções na ordem que veio do arraste, preservando o
+ * `hidden` de cada uma. (O `_commitSectionOrder` do GNOME encadeia
+ * `moveSection`, o que troca vizinhos quando a ordem não mudou — por isso
+ * aqui a ordem é aplicada direto.)
+ */
+export function applySectionOrder(current, orderedIds) {
+    const byId = new Map(current.map(section => [section.id, section]));
+    const ordered = orderedIds.filter(id => byId.has(id)).map(id => byId.get(id));
+    const rest = current.filter(section => !orderedIds.includes(section.id));
+    return [...ordered, ...rest];
+}
+
 /**
  * Equivalente Windows do `lib/settingsStore.js`: um JSON no lugar do
  * GSettings e o `safeStorage` do Electron (DPAPI) no lugar do libsecret.

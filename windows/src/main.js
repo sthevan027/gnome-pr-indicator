@@ -4,12 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {moveSection, toggleHidden} from '../../lib/sectionsConfig.js';
+import {toggleHidden} from '../../lib/sectionsConfig.js';
 import {loginItemSettings, parseAutostartArg} from './autostart.js';
 import {badgeText, isInside, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
 import {computePopupPosition} from './popup-position.js';
-import {SettingsStore} from './settings-store.js';
+import {applySectionOrder, electronCrypto, SettingsStore} from './settings-store.js';
 
 const POLL_SECONDS = 60;
 const POPUP_WIDTH = 360;
@@ -273,11 +273,7 @@ function registerIpc() {
         pushState();
     });
     ipcMain.on('commit-section-order', (_e, orderedIds) => {
-        // Mesmo algoritmo do `_commitSectionOrder` do GNOME.
-        let updated = store.getSectionsConfig();
-        for (let i = 1; i < orderedIds.length; i++)
-            updated = moveSection(updated, orderedIds[i], orderedIds[i - 1]);
-        store.setSectionsConfig(updated);
+        store.setSectionsConfig(applySectionOrder(store.getSectionsConfig(), orderedIds));
         pushState();
     });
     ipcMain.on('set-theme', (_e, name) => {
@@ -314,15 +310,16 @@ function registerIpc() {
         if (next === popupHeight)
             return;
         popupHeight = next;
+        // Com a janela escondida só guarda a altura: o `setSize` não tem
+        // efeito antes do primeiro show (janela não redimensionável) e o
+        // `positionPopup` aplica a altura ao abrir.
         if (popup.isVisible())
             positionPopup();
-        else
-            popup.setSize(POPUP_WIDTH, popupHeight);
     });
 }
 
 async function start() {
-    store = new SettingsStore(app.getPath('userData'), safeStorage);
+    store = new SettingsStore(app.getPath('userData'), electronCrypto(safeStorage));
     client = process.env.PR_INDICATOR_FAKE
         ? fakeClient(process.env.PR_INDICATOR_FAKE)
         : new GitHubClient({execGh, getManualToken: () => store.getToken()});

@@ -109,6 +109,7 @@ function attachDrag(handle, row, container) {
         handle.setPointerCapture(event.pointerId);
         row.classList.add('dragging');
         let lastY = event.clientY;
+        const initialOrder = [...container.children].map(r => r.dataset.sectionId);
 
         const onMove = moveEvent => {
             const deltaY = moveEvent.clientY - lastY;
@@ -129,7 +130,9 @@ function attachDrag(handle, row, container) {
             handle.removeEventListener('pointerup', onUp);
             handle.removeEventListener('pointercancel', onUp);
             row.classList.remove('dragging');
-            api.commitSectionOrder([...container.children].map(r => r.dataset.sectionId));
+            const order = [...container.children].map(r => r.dataset.sectionId);
+            if (order.join() !== initialOrder.join())
+                api.commitSectionOrder(order);
         };
 
         handle.addEventListener('pointermove', onMove);
