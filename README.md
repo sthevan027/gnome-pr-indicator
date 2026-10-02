@@ -10,6 +10,10 @@ esperando a sua revisão e os seus PRs próprios abertos no GitHub. Clique no
 
 Atualiza sozinha a cada 60 segundos.
 
+> **Windows:** também existe uma versão pra bandeja do Windows, com o mesmo
+> popup, os mesmos temas e o mesmo painel de configuração — ver
+> [`windows/README.md`](windows/README.md).
+
 ![Popup do PR Indicator na barra superior](screenshots/popup.png)
 
 ## Requisitos
@@ -78,4 +82,5 @@ stylesheet.css       estilo do ícone/label na barra e dos temas
 schemas/             schema GSettings compilado (ordem, tema)
 icons/               ícones customizados (symbolic, recoloridos pelo tema)
 tests/               scripts de verificação via `gjs -m` (sem framework)
+windows/             versão Windows (Electron, bandeja) — ver windows/README.md
 ```
