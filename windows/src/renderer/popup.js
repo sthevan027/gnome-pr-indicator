@@ -230,6 +230,11 @@ document.addEventListener('keydown', event => {
 new ResizeObserver(() => api.resize(document.getElementById('menu').offsetHeight))
     .observe(document.getElementById('menu'));
 
+// A janela é recriada ao entrar/sair do tema Glass; nesse caso ela já abre
+// no painel de config, onde o tema foi trocado.
+if (new URLSearchParams(location.search).get('view') === 'config')
+    showConfigView(true);
+
 api.onState(render);
 api.getState().then(state => {
     if (!current)

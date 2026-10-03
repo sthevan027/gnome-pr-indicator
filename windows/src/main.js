@@ -178,18 +178,6 @@ function pushState() {
     updateTray();
 }
 
-function applyWindowMaterial() {
-    if (!popup)
-        return;
-    if (store.getTheme() === 'glass') {
-        popup.setBackgroundColor('#00000000');
-        popup.setBackgroundMaterial('acrylic');
-    } else {
-        popup.setBackgroundMaterial('none');
-        popup.setBackgroundColor('#00000000');
-    }
-}
-
 function formatTime(date) {
     return date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
 }
@@ -206,9 +194,10 @@ async function refreshOnce() {
         state.error = e.message;
         // Falha de autenticação limpa a lista; falha pontual (rede, 5xx,
         // rate limit) mantém a última lista boa.
-        if (e instanceof AuthError)
+        if (e instanceof AuthError) {
             state.items = {review: [], mine: []};
             state.loaded = false;
+        }
         console.error('pr-indicator: refresh failed', e);
     }
     state.ghAuth = client.lastTokenSource === 'gh';
@@ -262,8 +251,17 @@ function togglePopup() {
     popup.focus();
 }
 
-function createPopup() {
-    popup = new BrowserWindow({
+// Glass: o acrílico só fica de verdade numa janela `transparent`. Numa janela
+// opaca o Windows troca o acrílico por cinza chapado sempre que ela está sem
+// foco, e o popup aberto pela bandeja nem sempre ganha o foco. Como
+// `transparent` só pode ser escolhido na criação (e tira os cantos
+// arredondados e a sombra do Windows), a janela é recriada ao entrar ou sair
+// do tema Glass.
+let popupIsGlass = false;
+
+async function createPopup({view} = {}) {
+    const glass = store.getTheme() === 'glass';
+    const win = new BrowserWindow({
         width: POPUP_WIDTH,
         height: popupHeight,
         show: false,
@@ -275,8 +273,9 @@ function createPopup() {
         fullscreenable: false,
         skipTaskbar: true,
         alwaysOnTop: true,
-        roundedCorners: true,
-        backgroundColor: '#00000000',
+        ...(glass
+            ? {transparent: true, backgroundMaterial: 'acrylic'}
+            : {roundedCorners: true, backgroundColor: '#00000000'}),
         webPreferences: {
             preload: path.join(here, 'preload.cjs'),
             contextIsolation: true,
@@ -284,17 +283,34 @@ function createPopup() {
             sandbox: true,
         },
     });
-    popup.setMenu(null);
-    popup.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
-    popup.webContents.on('will-navigate', event => event.preventDefault());
-    popup.on('blur', () => {
-        if (popup.isVisible()) {
-            popup.hide();
+    win.setMenu(null);
+    win.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
+    win.webContents.on('will-navigate', event => event.preventDefault());
+    win.on('blur', () => {
+        if (win.isVisible()) {
+            win.hide();
             lastHiddenAt = Date.now();
         }
     });
-    applyWindowMaterial();
-    return popup.loadFile(path.join(here, 'renderer', 'popup.html'));
+    await win.loadFile(path.join(here, 'renderer', 'popup.html'), {query: view ? {view} : {}});
+    popupIsGlass = glass;
+    return win;
+}
+
+async function recreatePopup() {
+    const old = popup;
+    const wasVisible = old.isVisible();
+    // A troca de tema acontece no painel de config: a janela nova já abre nele.
+    const next = await createPopup({view: 'config'});
+    old.removeAllListeners('blur');
+    popup = next;
+    pushState();
+    if (wasVisible) {
+        positionPopup();
+        popup.show();
+        popup.focus();
+    }
+    old.destroy();
 }
 
 function isGitHubUrl(value) {
@@ -332,8 +348,10 @@ function registerIpc() {
         if (!THEMES.includes(name))
             return;
         store.setTheme(name);
-        applyWindowMaterial();
-        pushState();
+        if ((name === 'glass') !== popupIsGlass)
+            recreatePopup();
+        else
+            pushState();
     });
     ipcMain.on('set-badge-section', (_e, id) => {
         if (!DEFAULT_SECTION_IDS.includes(id))
@@ -383,7 +401,7 @@ async function start() {
         : new GitHubClient({execGh, getManualToken: () => store.getToken(), fetchImpl: net.fetch});
 
     registerIpc();
-    await createPopup();
+    popup = await createPopup();
 
     tray = new Tray(await imageFor('icon'));
     tray.setToolTip('PR Indicator');
