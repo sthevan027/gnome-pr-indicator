@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {computePopupPosition} from '../src/popup-position.js';
+import {computePopupPosition, roundedShape} from '../src/popup-position.js';
 
 const GAP = 8;
 // Tela 1920x1080 com barra de tarefas de 48px embaixo.
@@ -54,4 +54,20 @@ test('barra embaixo com ícone no flyout do ^: abre acima do ícone', () => {
 test('popup mais alto que a tela gruda no topo', () => {
     const tray = {x: 1700, y: 1040, width: 24, height: 32};
     assert.equal(computePopupPosition(tray, {width: 380, height: 2000}, workArea).y, GAP);
+});
+
+test('roundedShape cobre a janela inteira menos os cantos', () => {
+    const rects = roundedShape(100, 50, 8);
+    const area = rects.reduce((sum, r) => sum + r.width * r.height, 0);
+    // Menor que o retângulo cheio, mas só pelos 4 cantos (< 4 * r²).
+    assert.ok(area < 100 * 50 && area > 100 * 50 - 4 * 8 * 8);
+    // Linha do topo é recuada; o meio vai de ponta a ponta.
+    assert.ok(rects[0].x > 0);
+    assert.deepEqual(rects.at(-1), {x: 0, y: 8, width: 100, height: 34});
+    assert.ok(rects.every(r => r.x >= 0 && r.x + r.width <= 100 && r.y >= 0 && r.y + r.height <= 50));
+});
+
+test('roundedShape limita o raio a metade do tamanho', () => {
+    const rects = roundedShape(10, 6, 8);
+    assert.ok(rects.every(r => r.height >= 0 && r.width >= 0));
 });

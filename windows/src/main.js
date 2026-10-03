@@ -8,13 +8,15 @@ import {DEFAULT_SECTION_IDS, toggleHidden} from '../../lib/sectionsConfig.js';
 import {loginItemSettings, parseAutostartArg} from './autostart.js';
 import {badgeText, isInside, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
-import {computePopupPosition} from './popup-position.js';
+import {computePopupPosition, roundedShape} from './popup-position.js';
 import {applySectionOrder, electronCrypto, SettingsStore} from './settings-store.js';
 
 const POLL_SECONDS = 60;
 const POPUP_WIDTH = 360;
 const HOVER_CHECK_MS = 150;
 const THEMES = ['auto', 'white', 'black', 'glass'];
+// Raio dos cantos do popup no tema Glass (escolhido pelo Sthevan).
+const GLASS_RADIUS = 12;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const GITHUB_ICON_PATH = fs.readFileSync(path.join(here, '..', '..', 'icons', 'github-symbolic.svg'), 'utf8')
@@ -235,6 +237,8 @@ function positionPopup() {
     const size = {width: POPUP_WIDTH, height: Math.min(popupHeight, display.workArea.height - 16)};
     const {x, y} = computePopupPosition(bounds, size, display.workArea);
     popup.setBounds({x, y, ...size});
+    if (popupIsGlass)
+        popup.setShape(roundedShape(size.width, size.height, GLASS_RADIUS));
 }
 
 function togglePopup() {
@@ -251,12 +255,12 @@ function togglePopup() {
     popup.focus();
 }
 
-// Glass: o acrílico só fica de verdade numa janela `transparent`. Numa janela
-// opaca o Windows troca o acrílico por cinza chapado sempre que ela está sem
-// foco, e o popup aberto pela bandeja nem sempre ganha o foco. Como
-// `transparent` só pode ser escolhido na criação (e tira os cantos
+// Glass: janela `transparent` com vidro escuro sem desfoque (o fundo vem do
+// CSS), escolhido pelo Sthevan entre as variações testadas — o acrílico do
+// Windows desfoca demais e, em janela opaca, vira cinza chapado sem foco.
+// Como `transparent` só pode ser escolhido na criação (e tira os cantos
 // arredondados e a sombra do Windows), a janela é recriada ao entrar ou sair
-// do tema Glass.
+// do tema Glass e os cantos são recortados com `setShape`.
 let popupIsGlass = false;
 
 async function createPopup({view} = {}) {
@@ -274,7 +278,7 @@ async function createPopup({view} = {}) {
         skipTaskbar: true,
         alwaysOnTop: true,
         ...(glass
-            ? {transparent: true, backgroundMaterial: 'acrylic'}
+            ? {transparent: true}
             : {roundedCorners: true, backgroundColor: '#00000000'}),
         webPreferences: {
             preload: path.join(here, 'preload.cjs'),

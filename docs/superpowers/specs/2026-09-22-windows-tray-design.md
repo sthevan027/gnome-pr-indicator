@@ -44,10 +44,14 @@ HTML/CSS.
 - **Popup "Automático":** reproduz o popup padrão do GNOME Shell (fundo
   cinza-escuro, cantos arredondados, itens com hover arredondado). Segue o
   tema claro/escuro do Windows, com a variante clara do Shell no modo claro.
-- **Branco / Preto / Glass:** as mesmas cores do `stylesheet.css`
-  (`#ffffff`/`#1a1a1a`, `#101010`/`#f2f2f2`, `rgba(20,20,20,0.55)`/`#f2f2f2`).
-  No Glass, o blur vem do material acrílico do Windows 11
-  (`backgroundMaterial: 'acrylic'`), no lugar do `Shell.BlurEffect`.
+- **Branco / Preto:** as mesmas cores do `stylesheet.css`
+  (`#ffffff`/`#1a1a1a`, `#101010`/`#f2f2f2`).
+- **Glass (revisado em 2026-10-03):** vidro escuro sem desfoque,
+  `rgba(10,10,10,0.72)`/`#f2f2f2`, em janela `transparent` com cantos de raio
+  12 (`setShape`). O acrílico do Windows foi testado e descartado: numa
+  janela opaca ele vira cinza chapado sem foco, e numa janela transparente
+  desfoca demais. O Sthevan escolheu esta variação vendo as opções lado a
+  lado.
 - **Estilos portados 1:1** do `stylesheet.css`: título de seção (negrito,
   0.85em, opacidade 0.7), "Nada por aqui" (itálico, 0.6), título do PR
   (até 320px, com reticências), repo (0.85em, 0.6), linha oculta na

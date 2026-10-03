@@ -37,3 +37,22 @@ export function computePopupPosition(tray, size, workArea) {
     const y = below > above ? tray.y + tray.height + GAP : tray.y - size.height - GAP;
     return {x: clampX(centerX - size.width / 2), y: clampY(y)};
 }
+
+/**
+ * Região de janela com cantos arredondados, como uma lista de retângulos (o
+ * formato do `BrowserWindow.setShape`). Usada no tema Glass: a janela
+ * transparente que o acrílico exige não ganha os cantos arredondados do
+ * Windows, então o recorte é feito aqui, linha a linha nos cantos.
+ */
+export function roundedShape(width, height, radius) {
+    const r = Math.min(radius, Math.floor(width / 2), Math.floor(height / 2));
+    const rects = [];
+    for (let y = 0; y < r; y++) {
+        const dy = r - y - 0.5;
+        const inset = Math.round(r - Math.sqrt(r * r - dy * dy));
+        rects.push({x: inset, y, width: width - 2 * inset, height: 1});
+        rects.push({x: inset, y: height - 1 - y, width: width - 2 * inset, height: 1});
+    }
+    rects.push({x: 0, y: r, width, height: height - 2 * r});
+    return rects;
+}

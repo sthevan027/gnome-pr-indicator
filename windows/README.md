@@ -21,8 +21,8 @@ bandeja do sistema* e ligue o **PR Indicator**.
 
 ## Requisitos
 
-- Windows 10/11. O tema Glass usa o material acrílico do Windows 11; no
-  Windows 10 ele vira um fundo escuro translúcido sem blur.
+- Windows 10/11. O tema Glass é um vidro escuro translúcido (sem desfoque),
+  com cantos arredondados, que deixa ver o que está atrás do popup.
 - [Node.js](https://nodejs.org/) 20+ e [Bun](https://bun.sh/) (gerenciador
   de pacotes).
 - [GitHub CLI](https://cli.github.com/) autenticado (`gh auth login`), **ou**

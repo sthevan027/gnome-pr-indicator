@@ -48,16 +48,12 @@ body.theme-black {
     --fg: #f2f2f2;
 }
 
-/* .pr-indicator-theme-glass — o blur vem do material acrílico da janela. */
+/* .pr-indicator-theme-glass — vidro escuro sem desfoque: dá pra ver o que
+ * está atrás, mais escuro que o rgba(20,20,20,0.55) do GNOME (lá o blur
+ * ajudava a legibilidade; aqui não há blur). */
 body.theme-glass {
-    --bg: rgba(20, 20, 20, 0.55);
+    --bg: rgba(10, 10, 10, 0.72);
     --fg: #f2f2f2;
-}
-
-/* No modo claro do Windows o acrílico fica claro por baixo; escurece mais
- * pra o texto claro continuar legível. */
-body.theme-glass.system-light {
-    --bg: rgba(20, 20, 20, 0.78);
 }
 
 ::-webkit-scrollbar {
@@ -150,14 +146,23 @@ button.popup-menu-item:focus-visible,
     font-weight: bold;
     /* No Shell o título fica ~5px à direita do texto dos itens. */
     padding: 4px 12px 2px 23px;
-    opacity: 0.7;
     font-size: 0.85em;
 }
 
+/*
+ * Opacidade igual à que aparece no GNOME: o St ignora `opacity` no CSS, então
+ * lá título de seção, repo e linha oculta saem com a cor cheia (ver
+ * screenshots/). Só "Nada por aqui" e a linha de status ficam apagados,
+ * porque são PopupMenuItem com reactive:false e o Shell aplica o estilo
+ * :insensitive neles.
+ */
 .pr-indicator-empty {
     padding: 4px 12px;
-    opacity: 0.6;
     font-style: italic;
+}
+
+.popup-menu-item.pr-indicator-empty {
+    opacity: 0.5;
 }
 
 .pr-indicator-item-title {
@@ -168,7 +173,6 @@ button.popup-menu-item:focus-visible,
 }
 
 .pr-indicator-item-repo {
-    opacity: 0.6;
     font-size: 0.85em;
     overflow: hidden;
     white-space: nowrap;
@@ -181,10 +185,6 @@ button.popup-menu-item:focus-visible,
     padding: 4px 12px;
     margin: 0 6px;
     border-radius: 9px;
-}
-
-.pr-indicator-config-row-hidden {
-    opacity: 0.45;
 }
 
 .pr-indicator-config-row.dragging {
