@@ -2,17 +2,65 @@
   "name": "pr-indicator-windows",
   "version": "1.0.0",
   "private": true,
-  "description": "PR Indicator na bandeja do Windows (mesmo visual da extensão GNOME).",
+  "description": "PR Indicator na bandeja do Windows: PRs esperando sua revisão e seus PRs abertos no GitHub.",
   "type": "module",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "test": "node --test \"tests/*.test.js\"",
     "autostart:enable": "electron . --autostart=enable",
-    "autostart:disable": "electron . --autostart=disable"
+    "autostart:disable": "electron . --autostart=disable",
+    "dist": "electron-builder --win"
   },
-  "trustedDependencies": ["electron"],
+  "trustedDependencies": [
+    "electron"
+  ],
   "devDependencies": {
-    "electron": "^44.5.1"
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "author": "Sthevan027",
+  "homepage": "https://github.com/sthevan027/gnome-pr-indicator",
+  "build": {
+    "appId": "com.sthevan027.pr-indicator",
+    "productName": "PR Indicator",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      {
+        "from": "../lib",
+        "to": "shared",
+        "filter": [
+          "sectionsConfig.js"
+        ]
+      },
+      {
+        "from": "../icons",
+        "to": "shared",
+        "filter": [
+          "github-symbolic.svg"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "PR-Indicator-Setup-${version}.exe",
+      "shortcutName": "PR Indicator"
+    },
+    "portable": {
+      "artifactName": "PR-Indicator-${version}-portable.exe"
+    }
   }
 }

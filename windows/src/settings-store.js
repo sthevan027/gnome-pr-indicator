@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {normalizeSections, DEFAULT_SECTION_IDS} from '../../lib/sectionsConfig.js';
+import {normalizeSections, DEFAULT_SECTION_IDS} from '../shared/sectionsConfig.js';
 
 // Mesmas chaves e padrões do schema GSettings da extensão GNOME
 // (schemas/org.gnome.shell.extensions.pr-indicator.gschema.xml).

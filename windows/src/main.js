@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {applySectionOrder, DEFAULT_SECTION_IDS, toggleHidden} from '../../lib/sectionsConfig.js';
-import {loginItemSettings, parseAutostartArg} from './autostart.js';
+import {applySectionOrder, DEFAULT_SECTION_IDS, toggleHidden} from '../shared/sectionsConfig.js';
+import {loginItemSettings, parseAutostartArg, shouldEnableOnFirstRun} from './autostart.js';
 import {badgeText, isInside, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
 import {computePopupPosition, roundedShape} from './popup-position.js';
@@ -19,8 +19,13 @@ const THEMES = ['auto', 'white', 'black', 'glass'];
 const GLASS_RADIUS = 12;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const GITHUB_ICON_PATH = fs.readFileSync(path.join(here, '..', '..', 'icons', 'github-symbolic.svg'), 'utf8')
-    .match(/ d="([^"]+)"/)[1];
+// No .exe o SVG vem em shared/ (copiado pelo electron-builder); em
+// desenvolvimento, direto de icons/ na raiz do repositório.
+const GITHUB_ICON_FILE = [
+    path.join(here, '..', 'shared', 'github-symbolic.svg'),
+    path.join(here, '..', '..', 'icons', 'github-symbolic.svg'),
+].find(file => fs.existsSync(file));
+const GITHUB_ICON_PATH = fs.readFileSync(GITHUB_ICON_FILE, 'utf8').match(/ d="([^"]+)"/)[1];
 
 app.setName('PR Indicator');
 app.setAppUserModelId('PR Indicator');
@@ -34,7 +39,7 @@ if (process.env.PR_INDICATOR_USER_DATA)
 
 const autostart = parseAutostartArg(process.argv);
 if (autostart !== null) {
-    app.setLoginItemSettings(loginItemSettings(autostart, process.execPath, app.getAppPath()));
+    app.setLoginItemSettings(loginItemSettings(autostart, process.execPath, app.getAppPath(), app.isPackaged));
     console.log(autostart ? 'PR Indicator vai abrir junto com o Windows.' : 'Autostart desligado.');
     app.exit(0);
 } else if (!app.requestSingleInstanceLock()) {
@@ -398,6 +403,14 @@ function registerIpc() {
 
 async function start() {
     store = new SettingsStore(app.getPath('userData'), electronCrypto(safeStorage));
+
+    const autostartMarker = path.join(app.getPath('userData'), '.autostart-initialized');
+    // No modo de teste (pasta de dados isolada) nunca mexe no registro.
+    const testMode = Boolean(process.env.PR_INDICATOR_USER_DATA);
+    if (!testMode && shouldEnableOnFirstRun({packaged: app.isPackaged, alreadyInitialized: fs.existsSync(autostartMarker)})) {
+        app.setLoginItemSettings(loginItemSettings(true, process.execPath, app.getAppPath(), true));
+        fs.writeFileSync(autostartMarker, '');
+    }
     client = process.env.PR_INDICATOR_FAKE
         ? fakeClient(process.env.PR_INDICATOR_FAKE)
         // net.fetch usa a pilha de rede do Chromium: respeita o proxy e os
