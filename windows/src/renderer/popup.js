@@ -108,42 +108,77 @@ function renderSectionsOrder(state) {
 
 // Reordenar arrastando pelo ícone — mesma regra do `_reorderDuringDrag` do
 // GNOME: troca de lugar com o vizinho quando o ponteiro anda meia linha.
+const SETTLE_MS = 160;
+
+// Arrastar pelo handle: a linha acompanha o ponteiro (transform, sem mexer
+// no layout), as outras deslizam pra abrir espaço e, ao soltar, a linha
+// encaixa animada no lugar novo — só então o DOM é reordenado e a ordem
+// gravada. Mesma regra de troca do GNOME: passou da metade da linha vizinha.
 function attachDrag(handle, row, container) {
     handle.addEventListener('pointerdown', event => {
-        if (event.button !== 0)
+        if (event.button !== 0 || dragging)
             return;
         event.preventDefault();
         handle.setPointerCapture(event.pointerId);
-        row.classList.add('dragging');
+
+        const rows = [...container.children];
+        const startIndex = rows.indexOf(row);
+        const tops = rows.map(r => r.offsetTop);
+        const step = rows.length > 1 ? tops[1] - tops[0] : row.offsetHeight;
+        const minDy = tops[0] - tops[startIndex];
+        const maxDy = tops[rows.length - 1] - tops[startIndex];
+        const startY = event.clientY;
+        let targetIndex = startIndex;
+
         dragging = true;
-        let lastY = event.clientY;
-        const initialOrder = [...container.children].map(r => r.dataset.sectionId);
+        row.classList.add('dragging');
 
         const onMove = moveEvent => {
-            const deltaY = moveEvent.clientY - lastY;
-            const rowHeight = row.offsetHeight || 1;
-            const siblings = [...container.children];
-            const index = siblings.indexOf(row);
+            const dy = Math.max(minDy, Math.min(moveEvent.clientY - startY, maxDy));
+            row.style.transform = `translateY(${dy}px)`;
 
-            if (deltaY > rowHeight / 2 && index < siblings.length - 1) {
-                siblings[index + 1].after(row);
-                lastY += rowHeight;
-            } else if (deltaY < -rowHeight / 2 && index > 0) {
-                siblings[index - 1].before(row);
-                lastY -= rowHeight;
-            }
+            targetIndex = Math.max(0, Math.min(Math.round(startIndex + dy / step), rows.length - 1));
+            rows.forEach((other, i) => {
+                if (other === row)
+                    return;
+                let shift = 0;
+                if (targetIndex > startIndex && i > startIndex && i <= targetIndex)
+                    shift = -step;
+                else if (targetIndex < startIndex && i >= targetIndex && i < startIndex)
+                    shift = step;
+                other.style.transform = shift ? `translateY(${shift}px)` : '';
+            });
         };
+
         const onUp = () => {
             handle.removeEventListener('pointermove', onMove);
             handle.removeEventListener('pointerup', onUp);
             handle.removeEventListener('pointercancel', onUp);
+
+            // Encaixa: a linha anima do ponto onde foi solta até a vaga dela.
             row.classList.remove('dragging');
-            dragging = false;
-            const order = [...container.children].map(r => r.dataset.sectionId);
-            if (order.join() !== initialOrder.join())
-                api.commitSectionOrder(order);
-            else if (current)
-                renderSectionsOrder(current);
+            row.classList.add('settling');
+            row.style.transform = `translateY(${(targetIndex - startIndex) * step}px)`;
+
+            setTimeout(() => {
+                // Troca transform por posição real no DOM sem animar.
+                rows.forEach(r => {
+                    r.classList.add('no-transition');
+                    r.classList.remove('settling');
+                    r.style.transform = '';
+                });
+                const order = rows.filter(r => r !== row);
+                order.splice(targetIndex, 0, row);
+                container.append(...order);
+                void container.offsetHeight;
+                rows.forEach(r => r.classList.remove('no-transition'));
+                dragging = false;
+
+                if (targetIndex !== startIndex)
+                    api.commitSectionOrder(order.map(r => r.dataset.sectionId));
+                else if (current)
+                    renderSectionsOrder(current);
+            }, SETTLE_MS);
         };
 
         handle.addEventListener('pointermove', onMove);

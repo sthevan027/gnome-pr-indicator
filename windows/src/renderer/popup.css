@@ -185,10 +185,58 @@ button.popup-menu-item:focus-visible,
     padding: 4px 12px;
     margin: 0 6px;
     border-radius: 9px;
+    position: relative;
+    /* As vizinhas deslizam pra abrir espaço durante o arraste. */
+    transition: transform 160ms cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Linha arrastada: segue o ponteiro sem atraso, por cima das outras, com
+ * fundo opaco (a vizinha passa por baixo) e sombra de "levantada". */
 .pr-indicator-config-row.dragging {
-    background: var(--hover);
+    transition: none;
+    z-index: 1;
+    background: var(--drag-bg);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* Soltou: encaixa animado na vaga, ainda por cima das outras. */
+.pr-indicator-config-row.settling {
+    z-index: 1;
+    background: var(--drag-bg);
+    transition: transform 160ms cubic-bezier(0.2, 0, 0, 1), box-shadow 160ms;
+}
+
+.pr-indicator-config-row.no-transition {
+    transition: none;
+}
+
+:root {
+    --drag-bg: #2e2e2e;
+}
+
+body.theme-auto-light,
+body.theme-white {
+    --drag-bg: #ffffff;
+}
+
+body.theme-auto-light .pr-indicator-config-row.dragging,
+body.theme-white .pr-indicator-config-row.dragging {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+body.theme-black {
+    --drag-bg: #1e1e1e;
+}
+
+body.theme-glass {
+    --drag-bg: rgba(40, 40, 40, 0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pr-indicator-config-row,
+    .pr-indicator-config-row.settling {
+        transition: none;
+    }
 }
 
 .pr-indicator-drag-handle {
