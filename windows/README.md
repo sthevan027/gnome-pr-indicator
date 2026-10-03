@@ -5,15 +5,59 @@ mesmos temas e o mesmo painel de configuração inline. Mostra os PRs
 esperando a sua revisão e os seus PRs abertos no GitHub, e atualiza sozinha
 a cada 60 segundos.
 
-- **Ícone na bandeja:** o logo do GitHub. **Ao passar o mouse, ele vira o
-  número de PRs** da seção escolhida em "O indicador acompanha". Mostra `…`
-  enquanto carrega e `!` em erro. Tirando o mouse, o logo volta.
-- **Clique (esquerdo ou direito):** abre o popup colado ao ícone. Clicar fora
-  ou apertar `Esc` fecha. Clicar num PR abre no navegador.
-- **Engrenagem:** abre o painel de configuração, com o mesmo conteúdo do
-  GNOME: ordem e visibilidade das seções (arraste pelo `☰`, use `−`/`+`),
-  o que o indicador acompanha, o tema (Automático/Branco/Preto/Glass) e a
-  autenticação.
+<p align="center">
+  <img src="../screenshots/windows/popup.png" width="360" alt="Popup com as seções de PRs">
+  &nbsp;
+  <img src="../screenshots/windows/config-panel.png" width="360" alt="Painel de configuração inline">
+</p>
+
+### Ícone na bandeja
+
+<img src="../screenshots/windows/hover.gif" width="160" alt="Ícone do GitHub trocando pelo número de PRs no hover">
+
+O ícone é o logo do GitHub. **Ao passar o mouse, ele vira o número de PRs**
+da seção escolhida em "O indicador acompanha". Mostra `…` enquanto carrega e
+`!` em erro. Tirando o mouse, o logo volta. A bandeja do Windows só tem um
+quadrado de 16×16, então o número não cabe ao lado do ícone como no painel
+do GNOME. O tooltip também mostra a contagem.
+
+**Clique (esquerdo ou direito):** abre o popup colado ao ícone, do lado
+certo da barra de tarefas. Ele funciona com a barra em cima ou embaixo e com
+o ícone no `^`. Clicar fora ou apertar `Esc` fecha. Clicar num PR abre no
+navegador.
+
+### Temas
+
+![Os quatro temas: Automático, Branco, Preto e Glass](../screenshots/windows/temas.png)
+
+- **Automático:** o popup padrão do GNOME Shell. Segue o modo claro/escuro
+  do Windows.
+- **Branco / Preto:** as mesmas cores do `stylesheet.css` da extensão.
+- **Glass:** vidro escuro translúcido, com cantos arredondados, que deixa
+  ver o que está atrás do popup.
+
+A troca de tema aplica na hora. Ao entrar ou sair do Glass, o popup é
+recriado num instante, já aberto no painel de configuração.
+
+### Painel de configuração
+
+A engrenagem abre o mesmo painel do GNOME:
+
+- ordem e visibilidade das seções (arraste pelo `☰`, use `−`/`+`);
+- o que o indicador acompanha;
+- o tema;
+- a autenticação (`gh` CLI ou token manual).
+
+<img src="../screenshots/windows/arrastar.gif" width="360" alt="Arrastando uma seção pra reordenar">
+
+**Arrastar pra reordenar é animado:**
+
+- a linha acompanha o ponteiro, levantada com sombra;
+- a vizinha desliza pra abrir espaço;
+- ao soltar, a linha encaixa na vaga (160ms).
+
+Se o Windows estiver com *reduzir animações* ligado, a troca é instantânea.
+Clicar no `☰` sem arrastar não muda nada.
 
 Dica: pra deixar o ícone sempre visível, e não escondido no `^`, vá em
 *Configurações → Personalização → Barra de tarefas → Outros ícones da

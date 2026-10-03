@@ -10,11 +10,28 @@ esperando a sua revisão e os seus PRs próprios abertos no GitHub. Clique no
 
 Atualiza sozinha a cada 60 segundos.
 
-> **Windows:** também existe uma versão pra bandeja do Windows, com o mesmo
-> popup, os mesmos temas e o mesmo painel de configuração — ver
-> [`windows/README.md`](windows/README.md).
-
 ![Popup do PR Indicator na barra superior](screenshots/popup.png)
+
+## Também no Windows
+
+A pasta [`windows/`](windows/README.md) traz uma versão pra **bandeja do
+Windows** (Electron), com o mesmo popup, os mesmos temas e o mesmo painel de
+configuração. No Windows:
+
+- o ícone vira o número de PRs ao passar o mouse;
+- o popup abre no clique;
+- reordenar as seções é animado;
+- o Glass é um vidro escuro translúcido.
+
+![Os quatro temas no Windows: Automático, Branco, Preto e Glass](screenshots/windows/temas.png)
+
+```powershell
+cd windows
+bun install
+bun run start
+```
+
+Detalhes, requisitos e autostart em [`windows/README.md`](windows/README.md).
 
 ## Requisitos
 
