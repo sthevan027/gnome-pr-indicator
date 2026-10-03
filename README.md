@@ -12,6 +12,27 @@ Atualiza sozinha a cada 60 segundos.
 
 ![Popup do PR Indicator na barra superior](screenshots/popup.png)
 
+## Também no Windows
+
+A pasta [`windows/`](windows/README.md) traz uma versão pra **bandeja do
+Windows** (Electron), com o mesmo popup, os mesmos temas e o mesmo painel de
+configuração. No Windows:
+
+- o ícone vira o número de PRs ao passar o mouse;
+- o popup abre no clique;
+- reordenar as seções é animado;
+- o Glass é um vidro escuro translúcido.
+
+![Os quatro temas no Windows: Automático, Branco, Preto e Glass](screenshots/windows/temas.png)
+
+```powershell
+cd windows
+bun install
+bun run start
+```
+
+Detalhes, requisitos e autostart em [`windows/README.md`](windows/README.md).
+
 ## Requisitos
 
 - GNOME Shell 48, 49 ou 50.
@@ -78,4 +99,5 @@ stylesheet.css       estilo do ícone/label na barra e dos temas
 schemas/             schema GSettings compilado (ordem, tema)
 icons/               ícones customizados (symbolic, recoloridos pelo tema)
 tests/               scripts de verificação via `gjs -m` (sem framework)
+windows/             versão Windows (Electron, bandeja) — ver windows/README.md
 ```

@@ -12,7 +12,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {SettingsStore} from './lib/settingsStore.js';
-import {moveSection, toggleHidden, effectiveOrder} from './lib/sectionsConfig.js';
+import {applySectionOrder, toggleHidden, effectiveOrder} from './lib/sectionsConfig.js';
 
 const POLL_SECONDS = 60;
 const MAX_ITEMS_PER_SECTION = 8;
@@ -350,9 +350,10 @@ class Indicator extends PanelMenu.Button {
         const orderedIds = this._sectionsOrderContainer.get_children().map(row => row._sectionId);
         const current = this._settingsStore.getSectionsConfig();
 
-        let updated = current;
-        for (let i = 1; i < orderedIds.length; i++)
-            updated = moveSection(updated, orderedIds[i], orderedIds[i - 1]);
+        // Encadear moveSection(i, i-1) trocava vizinhos de lugar mesmo quando
+        // a ordem não tinha mudado (um clique no handle sem arrastar invertia
+        // as seções). Aplica a ordem final direto.
+        const updated = applySectionOrder(current, orderedIds);
 
         this._settingsStore.setSectionsConfig(updated);
         this.refresh();
