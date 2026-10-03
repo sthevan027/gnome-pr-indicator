@@ -4,12 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {DEFAULT_SECTION_IDS, toggleHidden} from '../../lib/sectionsConfig.js';
+import {applySectionOrder, DEFAULT_SECTION_IDS, toggleHidden} from '../../lib/sectionsConfig.js';
 import {loginItemSettings, parseAutostartArg} from './autostart.js';
 import {badgeText, isInside, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
 import {computePopupPosition, roundedShape} from './popup-position.js';
-import {applySectionOrder, electronCrypto, SettingsStore} from './settings-store.js';
+import {electronCrypto, SettingsStore} from './settings-store.js';
 
 const POLL_SECONDS = 60;
 const POPUP_WIDTH = 360;

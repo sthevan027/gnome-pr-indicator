@@ -4,6 +4,7 @@ import {
     moveSection,
     toggleHidden,
     effectiveOrder,
+    applySectionOrder,
 } from '../lib/sectionsConfig.js';
 
 let failures = 0;
@@ -79,6 +80,23 @@ assertEqual(
 );
 
 assertEqual(DEFAULT_SECTION_IDS, ['review', 'mine'], 'DEFAULT_SECTION_IDS correto');
+
+const ordered = [{id: 'mine', hidden: false}, {id: 'review', hidden: true}];
+assertEqual(
+    applySectionOrder(ordered, ['mine', 'review']),
+    ordered,
+    'applySectionOrder: ordem igual (clique sem arrastar) não troca nada'
+);
+assertEqual(
+    applySectionOrder(ordered, ['review', 'mine']),
+    [{id: 'review', hidden: true}, {id: 'mine', hidden: false}],
+    'applySectionOrder: aplica a nova ordem e mantém hidden'
+);
+assertEqual(
+    applySectionOrder(ordered, ['review', 'fantasma']),
+    [{id: 'review', hidden: true}, {id: 'mine', hidden: false}],
+    'applySectionOrder: ignora id desconhecido e põe as faltantes no fim'
+);
 
 if (failures > 0) {
     print(`\n${failures} teste(s) falharam.`);

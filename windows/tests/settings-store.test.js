@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import {applySectionOrder, electronCrypto, SettingsStore} from '../src/settings-store.js';
+import {applySectionOrder} from '../../lib/sectionsConfig.js';
+import {electronCrypto, SettingsStore} from '../src/settings-store.js';
 
 // Cifra de mentira: só inverte e marca, o suficiente pra provar que o
 // token nunca vai pro disco em texto plano.
