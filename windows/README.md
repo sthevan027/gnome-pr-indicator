@@ -74,6 +74,30 @@ bandeja do sistema* e ligue o **PR Indicator**.
 
 ## Instalação
 
+### Pelo instalador (recomendado)
+
+Baixe na página de [Releases](https://github.com/sthevan027/gnome-pr-indicator/releases):
+
+- **`PR-Indicator-Setup-x.y.z.exe`:** instala só pro seu usuário, em
+  `%LOCALAPPDATA%\Programs\`, sem pedir administrador. Na primeira vez que
+  abre, já liga o *iniciar com o Windows*.
+- **`PR-Indicator-x.y.z-portable.exe`:** roda sem instalar.
+
+O `.exe` não é assinado digitalmente. Na primeira vez, o Windows pode
+mostrar "O Windows protegeu o computador": clique em *Mais informações →
+Executar assim mesmo*.
+
+Pra desligar ou religar o início automático:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\pr-indicator-windows\PR Indicator.exe" --autostart=disable
+& "$env:LOCALAPPDATA\Programs\pr-indicator-windows\PR Indicator.exe" --autostart=enable
+```
+
+Pra desinstalar: *Configurações → Aplicativos → PR Indicator*.
+
+### A partir do código
+
 ```powershell
 cd windows
 bun install
@@ -81,12 +105,13 @@ bun install
 # Electron não tiver baixado (node_modules/electron/dist vazio):
 node node_modules/electron/install.js
 bun run start
+bun run autostart:enable    # desliga com: bun run autostart:disable
 ```
 
-Pra abrir junto com o Windows:
+Pra gerar o instalador e a versão portátil em `windows/dist/`:
 
 ```powershell
-bun run autostart:enable    # desliga com: bun run autostart:disable
+bun run dist
 ```
 
 ## Onde ficam os dados
@@ -119,6 +144,8 @@ src/popup-position.js   onde abrir o popup conforme a barra de tarefas
 src/autostart.js        entrada "abrir com o Windows"
 src/renderer/           popup (HTML/CSS/JS) e desenho do ícone da bandeja
 tests/                  testes com `node --test` (bun run test)
+shared/                 lógica compartilhada com o GNOME (reexporta ../lib; no .exe vira o arquivo real)
+build/icon.png          ícone do executável
 ```
 
 A lógica de ordem e visibilidade das seções é a mesma da extensão,

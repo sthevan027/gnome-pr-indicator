@@ -25,13 +25,20 @@ configuração. No Windows:
 
 ![Os quatro temas no Windows: Automático, Branco, Preto e Glass](screenshots/windows/temas.png)
 
-```powershell
-cd windows
-bun install
-bun run start
-```
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/windows/hover.gif" width="160" alt="Ícone trocando pelo número de PRs no hover"><br><sub>Hover no ícone mostra a contagem</sub></td>
+    <td align="center"><img src="screenshots/windows/arrastar.gif" width="360" alt="Arrastando uma seção pra reordenar"><br><sub>Reordenar seções com animação</sub></td>
+  </tr>
+</table>
 
-Detalhes, requisitos e autostart em [`windows/README.md`](windows/README.md).
+**Instalar:** baixe o `PR-Indicator-Setup-x.y.z.exe` na página de
+[Releases](https://github.com/sthevan027/gnome-pr-indicator/releases). Ele
+instala só pro seu usuário (não pede administrador) e já liga o
+*iniciar com o Windows*.
+
+Detalhes, versão portátil e como rodar a partir do código em
+[`windows/README.md`](windows/README.md).
 
 ## Requisitos
 
