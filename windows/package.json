@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "PR Indicator na bandeja do Windows: PRs esperando sua revisão e seus PRs abertos no GitHub.",
+  "license": "MIT",
   "type": "module",
   "main": "src/main.js",
   "scripts": {

@@ -2,6 +2,8 @@
 
 # PR Indicator
 
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+
 ![1790030950895](image/README/1790030950895.png)
 
 Extensão do **GNOME Shell** que mostra na barra superior os *pull requests*
@@ -108,3 +110,7 @@ icons/               ícones customizados (symbolic, recoloridos pelo tema)
 tests/               scripts de verificação via `gjs -m` (sem framework)
 windows/             versão Windows (Electron, bandeja) — ver windows/README.md
 ```
+
+## Licença
+
+[MIT](LICENSE).
