@@ -1,14 +1,14 @@
-import {app, BrowserWindow, ipcMain, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, Tray} from 'electron';
+import {app, BrowserWindow, ipcMain, Menu, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, Tray} from 'electron';
 import {exec} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {applySectionOrder, DEFAULT_SECTION_IDS, toggleHidden} from '../shared/sectionsConfig.js';
-import {loginItemSettings, parseAutostartArg, shouldEnableOnFirstRun} from './autostart.js';
+import {linuxAutostartPath, loginItemSettings, parseAutostartArg, setLinuxAutostart, shouldEnableOnFirstRun} from './autostart.js';
 import {badgeText, isInside, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
-import {computePopupPosition, roundedShape} from './popup-position.js';
+import {computeCornerPosition, computePopupPosition, roundedShape} from './popup-position.js';
 import {electronCrypto, SettingsStore} from './settings-store.js';
 
 const POLL_SECONDS = 60;
@@ -27,6 +27,22 @@ const GITHUB_ICON_FILE = [
 ].find(file => fs.existsSync(file));
 const GITHUB_ICON_PATH = fs.readFileSync(GITHUB_ICON_FILE, 'utf8').match(/ d="([^"]+)"/)[1];
 
+const IS_LINUX = process.platform === 'linux';
+// Linux: sem `tray.getBounds()` nem `mouse-move`. O popup abre num canto da
+// tela e o número fica sempre visível num selo sobre o logo.
+const LINUX_BASE_SIZE = 22;
+const LINUX_SCALES = [1, 1.5, 2];
+
+if (IS_LINUX) {
+    // Segue a sessão: Wayland nativo quando há WAYLAND_DISPLAY, senão X11.
+    // (Forçar XWayland não serve: no KWin do KOS o popup "abre" pro Electron
+    // mas a janela nunca aparece.) No Wayland o compositor escolhe onde a
+    // janela aparece, então a posição pedida por PR_INDICATOR_CORNER só vale
+    // no X11. PR_INDICATOR_OZONE=x11|wayland sobrepõe a escolha.
+    const ozone = process.env.PR_INDICATOR_OZONE || (process.env.WAYLAND_DISPLAY ? 'wayland' : 'x11');
+    app.commandLine.appendSwitch('ozone-platform', ozone);
+}
+
 app.setName('PR Indicator');
 app.setAppUserModelId('PR Indicator');
 
@@ -37,10 +53,25 @@ app.setAppUserModelId('PR Indicator');
 if (process.env.PR_INDICATOR_USER_DATA)
     app.setPath('userData', process.env.PR_INDICATOR_USER_DATA);
 
+// Liga/desliga o "abrir junto com a sessão": registro no Windows, .desktop
+// em ~/.config/autostart no Linux.
+function applyAutostart(enabled, packaged) {
+    if (IS_LINUX) {
+        setLinuxAutostart(enabled, {
+            execPath: process.execPath,
+            appPath: app.getAppPath(),
+            packaged,
+            appImage: process.env.APPIMAGE || null,
+        }, fs, linuxAutostartPath(process.env, app.getPath('home')));
+    } else {
+        app.setLoginItemSettings(loginItemSettings(enabled, process.execPath, app.getAppPath(), packaged));
+    }
+}
+
 const autostart = parseAutostartArg(process.argv);
 if (autostart !== null) {
-    app.setLoginItemSettings(loginItemSettings(autostart, process.execPath, app.getAppPath(), app.isPackaged));
-    console.log(autostart ? 'PR Indicator vai abrir junto com o Windows.' : 'Autostart desligado.');
+    applyAutostart(autostart, app.isPackaged);
+    console.log(autostart ? 'PR Indicator vai abrir junto com a sessão.' : 'Autostart desligado.');
     app.exit(0);
 } else if (!app.requestSingleInstanceLock()) {
     app.exit(0);
@@ -93,7 +124,19 @@ function execGh() {
 }
 
 function trayIsDark() {
-    return nativeTheme.shouldUseDarkColorsForSystemIntegratedUI;
+    // Só Windows/macOS têm um tema próprio da bandeja; no Linux vale o tema
+    // do sistema.
+    return IS_LINUX ? nativeTheme.shouldUseDarkColors : nativeTheme.shouldUseDarkColorsForSystemIntegratedUI;
+}
+
+// Cor do ícone da bandeja. O painel pode ter uma cor própria (a barra do
+// KDE/Quickshell, por exemplo), então PR_INDICATOR_TRAY_COLOR=#rrggbb
+// sobrepõe a escolha automática.
+function trayColor() {
+    const custom = process.env.PR_INDICATOR_TRAY_COLOR;
+    if (custom && /^#[0-9a-f]{3,8}$/i.test(custom))
+        return custom;
+    return trayIsDark() ? '#ffffff' : '#1a1a1a';
 }
 
 function effectiveTheme() {
@@ -105,6 +148,10 @@ function effectiveTheme() {
 
 async function renderImage(kind, text, color) {
     const args = {kind, text, path: GITHUB_ICON_PATH, color};
+    if (IS_LINUX) {
+        args.base = LINUX_BASE_SIZE;
+        args.scales = LINUX_SCALES;
+    }
     const urls = await popup.webContents.executeJavaScript(`window.renderTrayIcon(${JSON.stringify(args)})`);
     const image = nativeImage.createEmpty();
     for (const {scale, dataUrl} of urls)
@@ -113,7 +160,7 @@ async function renderImage(kind, text, color) {
 }
 
 function imageFor(kind, text = '') {
-    const color = trayIsDark() ? '#ffffff' : '#1a1a1a';
+    const color = trayColor();
     const key = `${kind}:${text}:${color}`;
     if (!iconImages.has(key)) {
         const promise = renderImage(kind, text, color);
@@ -139,7 +186,11 @@ async function updateTray() {
     const generation = ++trayGeneration;
     const badge = badgeState();
     tray.setToolTip(tooltipText(badge));
-    const image = hovering ? await imageFor('text', badgeText(badge)) : await imageFor('icon');
+    let image;
+    if (IS_LINUX)
+        image = await imageFor('badge', badgeText(badge));
+    else
+        image = hovering ? await imageFor('text', badgeText(badge)) : await imageFor('icon');
     if (generation === trayGeneration && tray)
         tray.setImage(image);
 }
@@ -235,12 +286,17 @@ async function refresh() {
 }
 
 function positionPopup() {
-    const bounds = tray.getBounds();
-    const display = screen.getDisplayNearestPoint({x: bounds.x, y: bounds.y});
+    // Linux: o ícone não tem posição conhecida; vale a tela principal e o
+    // canto escolhido (PR_INDICATOR_CORNER: top-right, top-left,
+    // bottom-right ou bottom-left).
+    const bounds = IS_LINUX ? null : tray.getBounds();
+    const display = IS_LINUX ? screen.getPrimaryDisplay() : screen.getDisplayNearestPoint({x: bounds.x, y: bounds.y});
     // Se o conteúdo não couber, a janela fica do tamanho da área útil e o
     // popup ganha rolagem.
     const size = {width: POPUP_WIDTH, height: Math.min(popupHeight, display.workArea.height - 16)};
-    const {x, y} = computePopupPosition(bounds, size, display.workArea);
+    const {x, y} = IS_LINUX
+        ? computeCornerPosition(display.workArea, size, process.env.PR_INDICATOR_CORNER)
+        : computePopupPosition(bounds, size, display.workArea);
     popup.setBounds({x, y, ...size});
     if (popupIsGlass)
         popup.setShape(roundedShape(size.width, size.height, GLASS_RADIUS));
@@ -383,7 +439,7 @@ function registerIpc() {
             store.setToken(token);
         } catch (e) {
             console.error('pr-indicator: falha ao gravar token', e);
-            return {ok: false, message: '✗ token válido, mas falhou ao salvar no cofre de senhas do Windows'};
+            return {ok: false, message: '✗ token válido, mas falhou ao salvar no cofre de senhas do sistema'};
         }
         refresh();
         return {ok: true, message: `✓ conectado como ${login}`};
@@ -408,7 +464,7 @@ async function start() {
     // No modo de teste (pasta de dados isolada) nunca mexe no registro.
     const testMode = Boolean(process.env.PR_INDICATOR_USER_DATA);
     if (!testMode && shouldEnableOnFirstRun({packaged: app.isPackaged, alreadyInitialized: fs.existsSync(autostartMarker)})) {
-        app.setLoginItemSettings(loginItemSettings(true, process.execPath, app.getAppPath(), true));
+        applyAutostart(true, true);
         fs.writeFileSync(autostartMarker, '');
     }
     client = process.env.PR_INDICATOR_FAKE
@@ -420,11 +476,22 @@ async function start() {
     registerIpc();
     popup = await createPopup();
 
-    tray = new Tray(await imageFor('icon'));
+    tray = new Tray(await imageFor(IS_LINUX ? 'badge' : 'icon', IS_LINUX ? badgeText(badgeState()) : ''));
     tray.setToolTip('PR Indicator');
     tray.on('click', togglePopup);
-    tray.on('right-click', togglePopup);
-    tray.on('mouse-move', onTrayMouseMove);
+    if (IS_LINUX) {
+        // No Linux (StatusNotifier) o clique direito abre um menu, não emite
+        // `right-click`; sem "Sair" o app não teria como fechar.
+        tray.setContextMenu(Menu.buildFromTemplate([
+            {label: 'Abrir', click: () => { if (!popup.isVisible()) togglePopup(); }},
+            {label: 'Atualizar agora', click: () => refresh()},
+            {type: 'separator'},
+            {label: 'Sair', click: () => app.quit()},
+        ]));
+    } else {
+        tray.on('right-click', togglePopup);
+        tray.on('mouse-move', onTrayMouseMove);
+    }
 
     // A cor do ícone faz parte da chave do cache, então basta redesenhar.
     nativeTheme.on('updated', pushState);
@@ -477,6 +544,8 @@ async function snapshot(dir) {
     save('tray-icon.png', (await imageFor('icon')).resize({width: 32, height: 32}));
     const text = badgeText(badgeState());
     save('tray-hover.png', (await imageFor('text', text)).resize({width: 32, height: 32}));
+    // O selo do Linux, ampliado pra dar pra ver no screenshot.
+    save('tray-badge.png', (await imageFor('badge', text)).resize({width: 128, height: 128}));
     fs.writeFileSync(path.join(dir, 'tooltip.txt'), tooltipText(badgeState()));
 
     positionPopup();

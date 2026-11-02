@@ -71,3 +71,26 @@ test('roundedShape limita o raio a metade do tamanho', () => {
     const rects = roundedShape(10, 6, 8);
     assert.ok(rects.every(r => r.height >= 0 && r.width >= 0));
 });
+
+import {computeCornerPosition} from '../src/popup-position.js';
+
+test('computeCornerPosition: canto superior direito é o padrão', () => {
+    const workArea = {x: 0, y: 32, width: 1920, height: 1048};
+    assert.deepEqual(computeCornerPosition(workArea, {width: 360, height: 300}), {x: 1552, y: 40});
+});
+
+test('computeCornerPosition: os quatro cantos, respeitando a área útil', () => {
+    const workArea = {x: 100, y: 30, width: 1000, height: 700};
+    const size = {width: 360, height: 300};
+    assert.deepEqual(computeCornerPosition(workArea, size, 'top-left'), {x: 108, y: 38});
+    assert.deepEqual(computeCornerPosition(workArea, size, 'top-right'), {x: 732, y: 38});
+    assert.deepEqual(computeCornerPosition(workArea, size, 'bottom-left'), {x: 108, y: 422});
+    assert.deepEqual(computeCornerPosition(workArea, size, 'bottom-right'), {x: 732, y: 422});
+});
+
+test('computeCornerPosition: canto inválido cai no padrão', () => {
+    const workArea = {x: 0, y: 0, width: 1000, height: 700};
+    assert.deepEqual(
+        computeCornerPosition(workArea, {width: 360, height: 300}, 'meio'),
+        computeCornerPosition(workArea, {width: 360, height: 300}, 'top-right'));
+});

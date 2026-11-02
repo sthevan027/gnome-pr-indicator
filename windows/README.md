@@ -1,6 +1,6 @@
 # PR Indicator — Windows
 
-Versão pra bandeja do Windows da extensão GNOME. Tem o mesmo popup, os
+Versão pra bandeja do Windows (e do Linux, veja [abaixo](#linux-kde-xfce-etc)) da extensão GNOME. Tem o mesmo popup, os
 mesmos temas e o mesmo painel de configuração inline. Mostra os PRs
 esperando a sua revisão e os seus PRs abertos no GitHub, e atualiza sozinha
 a cada 60 segundos.
@@ -62,6 +62,60 @@ Clicar no `☰` sem arrastar não muda nada.
 Dica: pra deixar o ícone sempre visível, e não escondido no `^`, vá em
 *Configurações → Personalização → Barra de tarefas → Outros ícones da
 bandeja do sistema* e ligue o **PR Indicator**.
+
+## Linux (KDE, XFCE etc.)
+
+O mesmo app roda no Linux, na bandeja do painel (StatusNotifier, o padrão do
+KDE Plasma). No GNOME, prefira a extensão da raiz do repositório. O que muda
+em relação ao Windows:
+
+- **Número sempre visível:** o Linux não avisa quando o mouse passa no ícone,
+  então o logo do GitHub leva o número num selo no canto. O tooltip também
+  mostra a contagem.
+- **Clique esquerdo** abre o popup; o **direito** abre um menu com *Abrir*,
+  *Atualizar agora* e *Sair*.
+- **Posição do popup:** no **X11** o popup abre num canto da tela principal
+  (padrão: superior direito; mude com `PR_INDICATOR_CORNER` = `top-right`,
+  `top-left`, `bottom-right` ou `bottom-left`). No **Wayland** o app não
+  escolhe onde a janela aparece: sem ajuda, o compositor a põe no meio da
+  tela. No **KDE Plasma** (KWin) instale o script de posição, que fixa o popup
+  no canto superior direito da área útil, abaixo do painel:
+
+  ```bash
+  ./linux/install-kwin-position.sh            # instala e ativa
+  ./linux/install-kwin-position.sh --remove   # desativa e remove
+  ```
+
+  Ele instala `~/.local/share/kwin/scripts/pr-indicator-position/`, liga em
+  `kwinrc` e só mexe na janela do PR Indicator (`pr-indicator-windows`).
+- **Wayland:** o app usa Wayland nativo quando a sessão é Wayland. Não force
+  XWayland: em alguns compositores (como o KWin do KOS) o popup nunca aparece. `PR_INDICATOR_OZONE=x11`
+  ou `wayland` sobrepõe a escolha.
+- **Cor do ícone:** segue o tema claro/escuro do sistema. Se o seu painel tem
+  outra cor, force com `PR_INDICATOR_TRAY_COLOR=#ffffff`.
+- **Autostart:** grava `~/.config/autostart/pr-indicator.desktop`. No
+  AppImage, liga sozinho na primeira execução, como no `.exe` instalado.
+- **Token manual:** é cifrado pelo cofre do sistema (KWallet ou libsecret
+  via `safeStorage`). Sem cofre, use o `gh` CLI.
+
+### Rodar a partir do código
+
+```bash
+cd windows
+npm install        # ou: bun install
+node node_modules/electron/install.js   # se o binário do Electron não baixou
+npm start
+npm run autostart:enable    # desliga com: npm run autostart:disable
+```
+
+### Gerar o AppImage
+
+```bash
+npm run dist:linux     # saída: windows/dist/PR-Indicator-x.y.z-x86_64.AppImage
+chmod +x dist/*.AppImage && ./dist/*.AppImage
+```
+
+Os dados ficam em `~/.config/PR Indicator/` (`settings.json` e `token.bin`).
 
 ## Requisitos
 

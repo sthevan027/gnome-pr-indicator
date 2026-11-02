@@ -1,8 +1,8 @@
 {
   "name": "pr-indicator-windows",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "PR Indicator na bandeja do Windows: PRs esperando sua revisão e seus PRs abertos no GitHub.",
+  "description": "PR Indicator na bandeja (Windows e Linux): PRs esperando sua revisão e seus PRs abertos no GitHub.",
   "license": "MIT",
   "type": "module",
   "main": "src/main.js",
@@ -11,7 +11,8 @@
     "test": "node --test \"tests/*.test.js\"",
     "autostart:enable": "electron . --autostart=enable",
     "autostart:disable": "electron . --autostart=disable",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
   },
   "trustedDependencies": [
     "electron"
@@ -62,6 +63,17 @@
     },
     "portable": {
       "artifactName": "PR-Indicator-${version}-portable.exe"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png",
+      "category": "Development",
+      "synopsis": "PRs do GitHub na bandeja"
+    },
+    "appImage": {
+      "artifactName": "PR-Indicator-${version}-x86_64.AppImage"
     }
   }
 }

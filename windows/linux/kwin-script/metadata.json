@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Id": "pr-indicator-position",
+        "Name": "PR Indicator: posição do popup",
+        "Description": "Fixa o popup do PR Indicator no canto superior direito da tela (no Wayland o app não escolhe a posição).",
+        "Authors": [{"Name": "PR Indicator"}],
+        "License": "MIT",
+        "Version": "1.0",
+        "EnabledByDefault": false
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

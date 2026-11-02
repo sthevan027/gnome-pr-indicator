@@ -56,3 +56,22 @@ export function roundedShape(width, height, radius) {
     rects.push({x: 0, y: r, width, height: height - 2 * r});
     return rects;
 }
+
+export const CORNERS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'];
+
+/**
+ * Linux: o Electron não sabe onde o ícone está (`tray.getBounds()` devolve
+ * zeros), então o popup abre num canto da área útil da tela, como o popup da
+ * extensão GNOME abre embaixo do painel. O padrão é o canto superior direito,
+ * onde ficam a bandeja e o relógio.
+ */
+export function computeCornerPosition(workArea, size, corner = 'top-right') {
+    const safe = CORNERS.includes(corner) ? corner : 'top-right';
+    const x = safe.endsWith('right')
+        ? workArea.x + workArea.width - size.width - GAP
+        : workArea.x + GAP;
+    const y = safe.startsWith('bottom')
+        ? workArea.y + workArea.height - size.height - GAP
+        : workArea.y + GAP;
+    return {x, y};
+}

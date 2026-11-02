@@ -23,8 +23,9 @@ export function electronCrypto(safeStorage) {
 }
 
 /**
- * Equivalente Windows do `lib/settingsStore.js`: um JSON no lugar do
- * GSettings e o `safeStorage` do Electron (DPAPI) no lugar do libsecret.
+ * Equivalente desktop do `lib/settingsStore.js`: um JSON no lugar do
+ * GSettings e o `safeStorage` do Electron (DPAPI no Windows, KWallet ou
+ * libsecret no Linux) no lugar do libsecret.
  * `crypto` é injetado pra dar pra testar fora do Electron.
  */
 export class SettingsStore {
@@ -96,7 +97,7 @@ export class SettingsStore {
 
     setToken(value) {
         if (!this._crypto.isAvailable())
-            throw new Error('cofre de senhas do Windows indisponível');
+            throw new Error('cofre de senhas do sistema indisponível');
         fs.mkdirSync(this._dir, {recursive: true});
         fs.writeFileSync(this._tokenFile, this._crypto.encrypt(value));
     }

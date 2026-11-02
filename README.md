@@ -14,6 +14,14 @@ Atualiza sozinha a cada 60 segundos.
 
 ![Popup do PR Indicator na barra superior](screenshots/popup.png)
 
+## Também no Linux fora do GNOME (KDE, XFCE…)
+
+A extensão só roda no GNOME Shell. Em outros desktops, use o app de bandeja
+da pasta [`windows/`](windows/README.md#linux-kde-xfce-etc), o mesmo código
+do Windows: ícone com o número de PRs na bandeja, popup, temas e
+configuração. Detalhes, AppImage e variáveis de ambiente em
+[`windows/README.md`](windows/README.md#linux-kde-xfce-etc).
+
 ## Também no Windows
 
 A pasta [`windows/`](windows/README.md) traz uma versão pra **bandeja do
