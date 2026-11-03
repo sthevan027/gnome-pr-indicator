@@ -13,13 +13,10 @@ a cada 60 segundos.
 
 ### Ícone na bandeja
 
-<img src="../screenshots/windows/hover.gif" width="160" alt="Ícone do GitHub trocando pelo número de PRs no hover">
-
-O ícone é o logo do GitHub. **Ao passar o mouse, ele vira o número de PRs**
-da seção escolhida em "O indicador acompanha". Mostra `…` enquanto carrega e
-`!` em erro. Tirando o mouse, o logo volta. A bandeja do Windows só tem um
-quadrado de 16×16, então o número não cabe ao lado do ícone como no painel
-do GNOME. O tooltip também mostra a contagem.
+O ícone é o logo do GitHub com o número de PRs da seção escolhida em "O
+indicador acompanha" num selo pequeno no canto inferior direito, sempre
+visível (sem hover). Mostra `…` enquanto carrega e `!` em erro. O tooltip
+também mostra a contagem.
 
 **Clique (esquerdo ou direito):** abre o popup colado ao ícone, do lado
 certo da barra de tarefas. Ele funciona com a barra em cima ou embaixo e com
@@ -193,7 +190,7 @@ src/main.js             processo principal: bandeja, popup, polling, IPC
 src/preload.cjs         ponte segura main ↔ popup (contextIsolation)
 src/github-client.js    buscas no GitHub, token (gh → manual), AuthError
 src/settings-store.js   settings.json + token cifrado
-src/badge.js            texto do hover/tooltip, detecção do mouse
+src/badge.js            texto do selo e do tooltip
 src/popup-position.js   onde abrir o popup conforme a barra de tarefas
 src/autostart.js        entrada "abrir com o Windows"
 src/renderer/           popup (HTML/CSS/JS) e desenho do ícone da bandeja
@@ -218,4 +215,4 @@ configurações reais:
 |---|---|
 | `PR_INDICATOR_USER_DATA` | pasta de dados isolada |
 | `PR_INDICATOR_FAKE` | usa um JSON no lugar do GitHub: `{"ghAuth": true, "review": [...], "mine": [...], "error": "auth" \| "<mensagem>"}`; no token fake, `valido` é aceito |
-| `PR_INDICATOR_SNAPSHOT` | salva `popup-pr.png`, `popup-config.png`, `tray-icon.png`, `tray-hover.png`, `tooltip.txt` e `bounds.json` nessa pasta e fecha |
+| `PR_INDICATOR_SNAPSHOT` | salva `popup-pr.png`, `popup-config.png`, `tray-icon.png`, `tray-badge.png`, `tooltip.txt` e `bounds.json` nessa pasta e fecha |

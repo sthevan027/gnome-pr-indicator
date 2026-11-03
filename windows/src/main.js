@@ -6,14 +6,13 @@ import {fileURLToPath} from 'node:url';
 
 import {applySectionOrder, DEFAULT_SECTION_IDS, toggleHidden} from '../shared/sectionsConfig.js';
 import {linuxAutostartPath, loginItemSettings, parseAutostartArg, setLinuxAutostart, shouldEnableOnFirstRun} from './autostart.js';
-import {badgeText, isInside, tooltipText} from './badge.js';
+import {badgeText, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
 import {computeCornerPosition, computePopupPosition, roundedShape} from './popup-position.js';
 import {electronCrypto, SettingsStore} from './settings-store.js';
 
 const POLL_SECONDS = 60;
 const POPUP_WIDTH = 360;
-const HOVER_CHECK_MS = 150;
 const THEMES = ['auto', 'white', 'black', 'glass'];
 // Raio dos cantos do popup no tema Glass (escolhido pelo Sthevan).
 const GLASS_RADIUS = 12;
@@ -90,8 +89,6 @@ let popup = null;
 let store = null;
 let client = null;
 let lastHiddenAt = 0;
-let hovering = false;
-let hoverTimer = null;
 // Cache das imagens da bandeja: a chave inclui a cor e o valor é a Promise,
 // assim renders simultâneos da mesma imagem não se duplicam.
 const iconImages = new Map();
@@ -186,33 +183,10 @@ async function updateTray() {
     const generation = ++trayGeneration;
     const badge = badgeState();
     tray.setToolTip(tooltipText(badge));
-    let image;
-    if (IS_LINUX)
-        image = await imageFor('badge', badgeText(badge));
-    else
-        image = hovering ? await imageFor('text', badgeText(badge)) : await imageFor('icon');
+    // Ícone fixo com a contagem num selo no canto inferior direito, sem hover.
+    const image = await imageFor('badge', badgeText(badge));
     if (generation === trayGeneration && tray)
         tray.setImage(image);
-}
-
-function stopHover() {
-    hovering = false;
-    clearInterval(hoverTimer);
-    hoverTimer = null;
-    updateTray();
-}
-
-function onTrayMouseMove() {
-    if (hovering)
-        return;
-    hovering = true;
-    updateTray();
-    // No Windows o Tray só emite `mouse-move` (não há `mouse-leave`), então
-    // a saída do mouse é detectada olhando a posição do cursor.
-    hoverTimer = setInterval(() => {
-        if (!tray || !isInside(screen.getCursorScreenPoint(), tray.getBounds()))
-            stopHover();
-    }, HOVER_CHECK_MS);
 }
 
 function viewState() {
@@ -476,7 +450,7 @@ async function start() {
     registerIpc();
     popup = await createPopup();
 
-    tray = new Tray(await imageFor(IS_LINUX ? 'badge' : 'icon', IS_LINUX ? badgeText(badgeState()) : ''));
+    tray = new Tray(await imageFor('badge', badgeText(badgeState())));
     tray.setToolTip('PR Indicator');
     tray.on('click', togglePopup);
     if (IS_LINUX) {
@@ -490,7 +464,6 @@ async function start() {
         ]));
     } else {
         tray.on('right-click', togglePopup);
-        tray.on('mouse-move', onTrayMouseMove);
     }
 
     // A cor do ícone faz parte da chave do cache, então basta redesenhar.
@@ -541,10 +514,9 @@ async function snapshot(dir) {
     fs.mkdirSync(dir, {recursive: true});
     const save = (name, image) => fs.writeFileSync(path.join(dir, name), image.toPNG());
 
-    save('tray-icon.png', (await imageFor('icon')).resize({width: 32, height: 32}));
     const text = badgeText(badgeState());
-    save('tray-hover.png', (await imageFor('text', text)).resize({width: 32, height: 32}));
-    // O selo do Linux, ampliado pra dar pra ver no screenshot.
+    save('tray-icon.png', (await imageFor('badge', text)).resize({width: 32, height: 32}));
+    // O selo ampliado, pra dar pra ver no screenshot.
     save('tray-badge.png', (await imageFor('badge', text)).resize({width: 128, height: 128}));
     fs.writeFileSync(path.join(dir, 'tooltip.txt'), tooltipText(badgeState()));
 
