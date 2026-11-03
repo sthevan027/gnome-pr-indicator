@@ -28,19 +28,15 @@ A pasta [`windows/`](windows/README.md) traz uma versão pra **bandeja do
 Windows** (Electron), com o mesmo popup, os mesmos temas e o mesmo painel de
 configuração. No Windows:
 
-- o ícone vira o número de PRs ao passar o mouse;
+- o ícone do GitHub leva o número de PRs num selo, sempre visível;
 - o popup abre no clique;
 - reordenar as seções é animado;
 - o Glass é um vidro escuro translúcido.
 
 ![Os quatro temas no Windows: Automático, Branco, Preto e Glass](screenshots/windows/temas.png)
 
-<table>
-  <tr>
-    <td align="center"><img src="screenshots/windows/hover.gif" width="160" alt="Ícone trocando pelo número de PRs no hover"><br><sub>Hover no ícone mostra a contagem</sub></td>
-    <td align="center"><img src="screenshots/windows/arrastar.gif" width="360" alt="Arrastando uma seção pra reordenar"><br><sub>Reordenar seções com animação</sub></td>
-  </tr>
-</table>
+<img src="screenshots/windows/arrastar.gif" width="360" alt="Arrastando uma seção pra reordenar"><br>
+<sub>Reordenar seções com animação</sub>
 
 **Instalar:** baixe o `PR-Indicator-Setup-x.y.z.exe` na página de
 [Releases](https://github.com/sthevan027/gnome-pr-indicator/releases). Ele
