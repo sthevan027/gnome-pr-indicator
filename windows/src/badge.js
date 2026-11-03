@@ -1,16 +1,10 @@
-// Texto que aparece no lugar do ícone quando o mouse passa por cima —
-// o mesmo que o `_countLabel` mostra ao lado do ícone no painel do GNOME.
+// Texto do selo no canto do ícone da bandeja.
 export function badgeText({status, count}) {
     if (status === 'loading')
         return '…';
     if (status === 'error')
         return '!';
     return count > 99 ? '99+' : String(count);
-}
-
-export function isInside(point, bounds) {
-    return point.x >= bounds.x && point.x < bounds.x + bounds.width &&
-        point.y >= bounds.y && point.y < bounds.y + bounds.height;
 }
 
 export function tooltipText({status, count, badgeSection, error}) {
