@@ -1,10 +1,18 @@
 .pr-indicator-box {
-    spacing: 4px;
+    padding: 0;
 }
 
+/* Selo de notificação no canto inferior direito do ícone */
 .pr-indicator-count {
+    font-size: 8pt;
     font-weight: bold;
-    padding-left: 2px;
+    color: #ffffff;
+    background-color: #e5484d;
+    border-radius: 99px;
+    min-width: 11px;
+    height: 11px;
+    padding: 0 3px;
+    text-align: center;
 }
 
 .pr-indicator-section-title {

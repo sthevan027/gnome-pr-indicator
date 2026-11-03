@@ -118,7 +118,13 @@ class Indicator extends PanelMenu.Button {
         this._client = new GitHubClient(this._settingsStore);
         this._timeoutId = null;
 
-        const box = new St.BoxLayout({style_class: 'pr-indicator-box', y_align: 2 /* Clutter.ActorAlign.CENTER */});
+        // Ícone com a contagem num selo pequeno (estilo notificação) sobreposto
+        // ao canto inferior direito. FixedLayout permite sobrepor os dois.
+        const box = new St.Widget({
+            style_class: 'pr-indicator-box',
+            layout_manager: new Clutter.FixedLayout(),
+            y_align: Clutter.ActorAlign.CENTER,
+        });
         const iconPath = GLib.build_filenamev([this._extension.path, 'icons', 'github-symbolic.svg']);
         this._icon = new St.Icon({
             gicon: Gio.icon_new_for_string(iconPath),
@@ -127,11 +133,27 @@ class Indicator extends PanelMenu.Button {
         this._countLabel = new St.Label({
             text: '…',
             style_class: 'pr-indicator-count',
-            y_align: 2,
+            y_align: Clutter.ActorAlign.CENTER,
         });
         box.add_child(this._icon);
         box.add_child(this._countLabel);
         this.add_child(box);
+
+        // Mantém o selo colado no canto inferior direito do ícone.
+        const placeBadge = () => {
+            const [, iconW] = this._icon.get_preferred_width(-1);
+            const [, iconH] = this._icon.get_preferred_height(-1);
+            const [, badgeW] = this._countLabel.get_preferred_width(-1);
+            const [, badgeH] = this._countLabel.get_preferred_height(-1);
+            const x = Math.round(iconW - badgeW + 4);
+            const y = Math.round(iconH - badgeH + 3);
+            if (this._countLabel.x !== x || this._countLabel.y !== y)
+                this._countLabel.set_position(x, y);
+        };
+        this._countLabel.connect('notify::text', placeBadge);
+        this._countLabel.connect('notify::mapped', placeBadge);
+        this._icon.connect('notify::mapped', placeBadge);
+        placeBadge();
 
         this._prView = new PopupMenu.PopupMenuSection();
         this._reviewSection = new PopupMenu.PopupMenuSection();
