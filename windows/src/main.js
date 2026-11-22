@@ -1,6 +1,7 @@
 import {app, BrowserWindow, ipcMain, Menu, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, Tray} from 'electron';
 import {exec} from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -16,6 +17,10 @@ const POPUP_WIDTH = 360;
 const THEMES = ['auto', 'white', 'black', 'glass'];
 // Raio dos cantos do popup no tema Glass (escolhido pelo Sthevan).
 const GLASS_RADIUS = 12;
+// O Windows 10 (build < 22000) ignora `roundedCorners`: os cantos só ficam
+// arredondados no Windows 11. Lá o recorte é feito à mão em todos os temas.
+const NEEDS_MANUAL_ROUNDING = process.platform === 'win32'
+    && Number(os.release().split('.')[2]) < 22000;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // No .exe o SVG vem em shared/ (copiado pelo electron-builder); em
@@ -272,7 +277,7 @@ function positionPopup() {
         ? computeCornerPosition(display.workArea, size, process.env.PR_INDICATOR_CORNER)
         : computePopupPosition(bounds, size, display.workArea);
     popup.setBounds({x, y, ...size});
-    if (popupIsGlass)
+    if (popupIsGlass || NEEDS_MANUAL_ROUNDING)
         popup.setShape(roundedShape(size.width, size.height, GLASS_RADIUS));
 }
 
