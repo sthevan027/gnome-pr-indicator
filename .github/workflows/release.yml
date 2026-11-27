@@ -1,0 +1,120 @@
+name: Release
+
+# Publica a release quando uma tag vX.Y.Z é enviada. O workflow compila o
+# instalador e o portátil no Windows, o AppImage no Linux e anexa tudo à
+# release, junto com o SHA256SUMS.txt. Rodando à mão (workflow_dispatch) ele
+# só compila e guarda os arquivos como artefatos, sem criar release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: windows/package-lock.json
+      - name: Instala dependências
+        working-directory: windows
+        run: npm ci
+      - name: Testes
+        working-directory: windows
+        run: npm test
+      - name: Gera instalador e portátil
+        working-directory: windows
+        run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            windows/dist/PR-Indicator-Setup-*.exe
+            windows/dist/PR-Indicator-*-portable.exe
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: windows/package-lock.json
+      - name: Instala dependências
+        working-directory: windows
+        run: npm ci
+      - name: Gera AppImage
+        working-directory: windows
+        run: npm run dist:linux
+      - name: Empacota o script do KWin
+        working-directory: windows
+        run: tar -czf dist/pr-indicator-kwin-position.tar.gz linux/install-kwin-position.sh linux/kwin-script
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            windows/dist/PR-Indicator-*.AppImage
+            windows/dist/pr-indicator-kwin-position.tar.gz
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: A tag precisa bater com a versão do package.json
+        run: |
+          version="$(node -p "require('./windows/package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME não bate com a versão $version do windows/package.json" >&2
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Gera SHA256SUMS.txt
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS.txt
+      - name: Cria a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          cat > notes.md <<NOTES
+          ## Downloads
+
+          ### Windows
+
+          | Arquivo | Pra quê |
+          |---|---|
+          | **\`PR-Indicator-Setup-${version}.exe\`** | Instalador (recomendado). Instala só pro seu usuário, sem pedir administrador, e já liga o *iniciar com o Windows*. |
+          | \`PR-Indicator-${version}-portable.exe\` | Roda sem instalar. |
+
+          Os binários **não são assinados**. Se aparecer "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo**. Confira os arquivos com \`SHA256SUMS.txt\`.
+
+          ### Linux
+
+          \`\`\`bash
+          chmod +x PR-Indicator-${version}-x86_64.AppImage
+          ./PR-Indicator-${version}-x86_64.AppImage
+          \`\`\`
+
+          KDE Plasma (Wayland): extraia \`pr-indicator-kwin-position.tar.gz\` e rode \`./linux/install-kwin-position.sh\`. No GNOME, prefira a extensão da raiz do repositório.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "PR Indicator ${version}" \
+            --generate-notes \
+            --notes-file notes.md
