@@ -317,6 +317,9 @@ async function createPopup({view} = {}) {
         fullscreenable: false,
         skipTaskbar: true,
         alwaysOnTop: true,
+        // Com `setShape`, a moldura invisível de redimensionamento do Windows
+        // (8px) aparece como uma faixa branca na lateral esquerda.
+        thickFrame: !(glass || NEEDS_MANUAL_ROUNDING),
         ...(glass
             ? {transparent: true}
             : {roundedCorners: true, backgroundColor: '#00000000'}),
@@ -430,8 +433,10 @@ function registerIpc() {
         popupHeight = next;
         // Com a janela escondida só guarda a altura: o `setSize` não tem
         // efeito antes do primeiro show (janela não redimensionável) e o
-        // `positionPopup` aplica a altura ao abrir.
-        if (popup.isVisible())
+        // `positionPopup` aplica a altura ao abrir. Na inicialização o
+        // renderer manda a altura antes de o `createPopup` resolver, então
+        // `popup` ainda pode ser null.
+        if (popup?.isVisible())
             positionPopup();
     });
 }
