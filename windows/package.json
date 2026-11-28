@@ -1,6 +1,6 @@
 {
   "name": "pr-indicator-windows",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "description": "PR Indicator na bandeja (Windows e Linux): PRs esperando sua revisão e seus PRs abertos no GitHub.",
   "license": "MIT",
