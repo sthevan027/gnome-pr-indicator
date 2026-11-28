@@ -37,7 +37,9 @@ jobs:
           name: windows
           path: |
             windows/dist/PR-Indicator-Setup-*.exe
+            windows/dist/PR-Indicator-Setup-*.exe.blockmap
             windows/dist/PR-Indicator-*-portable.exe
+            windows/dist/latest.yml
           if-no-files-found: error
 
   linux:
@@ -64,6 +66,7 @@ jobs:
           path: |
             windows/dist/PR-Indicator-*.AppImage
             windows/dist/pr-indicator-kwin-position.tar.gz
+            windows/dist/latest-linux.yml
           if-no-files-found: error
 
   release:

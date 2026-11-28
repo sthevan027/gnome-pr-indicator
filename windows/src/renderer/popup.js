@@ -212,6 +212,30 @@ function renderAuth(state) {
     authStatus.title = authStatus.textContent;
 }
 
+// ---- atualização ----
+
+function renderUpdate(update) {
+    const row = $('update-row');
+    row.hidden = !update.row;
+    if (update.row) {
+        row.textContent = update.row.label;
+        row.title = update.row.label;
+        row.disabled = update.row.action === null;
+    }
+    $('update-version').textContent = `Versão atual: ${update.currentVersion}`;
+    $('check-update').disabled = !update.enabled || update.checking;
+    const check = $('update-check');
+    check.textContent = update.checkText;
+    check.hidden = !update.checkText;
+}
+
+// A ação é a do estado atual: o main decide o que o clique faz.
+const UPDATE_ACTIONS = {
+    download: () => api.downloadUpdate(),
+    open: () => api.openRelease(),
+    install: () => api.installUpdate(),
+};
+
 // ---- geral ----
 
 function render(state) {
@@ -224,6 +248,7 @@ function render(state) {
     renderOptions('badge-options', BADGE_OPTIONS, state.badgeSection, api.setBadgeSection);
     renderOptions('theme-options', THEME_OPTIONS, state.theme, api.setTheme);
     renderAuth(state);
+    renderUpdate(state.update);
 }
 
 function showConfigView(show) {
@@ -234,6 +259,11 @@ function showConfigView(show) {
 $('refresh').addEventListener('click', () => api.refresh());
 $('settings').addEventListener('click', () => showConfigView(true));
 $('back').addEventListener('click', () => showConfigView(false));
+$('update-row').addEventListener('click', () => {
+    const action = current?.update?.row?.action;
+    UPDATE_ACTIONS[action]?.();
+});
+$('check-update').addEventListener('click', () => api.checkUpdate());
 
 $('token').addEventListener('keydown', async event => {
     if (event.key !== 'Enter')

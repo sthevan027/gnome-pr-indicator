@@ -1,4 +1,5 @@
 import {app, BrowserWindow, ipcMain, Menu, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, Tray} from 'electron';
+import electronUpdater from 'electron-updater';
 import {exec} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -11,6 +12,7 @@ import {badgeText, tooltipText} from './badge.js';
 import {AuthError, GitHubClient} from './github-client.js';
 import {computeCornerPosition, computePopupPosition, roundedShape} from './popup-position.js';
 import {electronCrypto, SettingsStore} from './settings-store.js';
+import {canInstallUpdates, CHECK_INTERVAL_MS, createUpdater} from './updater.js';
 
 const POLL_SECONDS = 60;
 const POPUP_WIDTH = 360;
@@ -93,6 +95,7 @@ let tray = null;
 let popup = null;
 let store = null;
 let client = null;
+let updater = null;
 let lastHiddenAt = 0;
 // Cache das imagens da bandeja: a chave inclui a cor e o valor é a Promise,
 // assim renders simultâneos da mesma imagem não se duplicam.
@@ -207,6 +210,7 @@ function viewState() {
         ghAuth: state.ghAuth,
         loaded: state.loaded,
         systemDark: nativeTheme.shouldUseDarkColors,
+        update: updater.getState(),
     };
 }
 
@@ -426,6 +430,17 @@ function registerIpc() {
         refresh();
         return {ok: true, message: `✓ conectado como ${login}`};
     });
+    ipcMain.on('check-update', () => updater.check(true));
+    ipcMain.on('download-update', () => updater.download());
+    ipcMain.on('install-update', () => updater.install());
+    ipcMain.on('open-release', () => {
+        // A URL sai do estado do main, nunca do renderer.
+        const url = updater.releasePageUrl();
+        if (url) {
+            shell.openExternal(url);
+            popup.hide();
+        }
+    });
     ipcMain.on('resize', (_e, height) => {
         const next = Math.max(60, Math.min(Math.ceil(Number(height) || 0), 900));
         if (next === popupHeight)
@@ -457,6 +472,20 @@ async function start() {
         // certificados do Windows (o fetch do Node ignora os dois).
         : new GitHubClient({execGh, getManualToken: () => store.getToken(), fetchImpl: net.fetch});
 
+    // O electron-updater só é acessado aqui, não no import.
+    const {autoUpdater} = electronUpdater;
+    // Sem AppImage no Linux o electron-updater não checa por padrão; com
+    // forceDevUpdateConfig ele checa, mas só no app empacotado.
+    if (IS_LINUX && !process.env.APPIMAGE && app.isPackaged)
+        autoUpdater.forceDevUpdateConfig = true;
+    updater = createUpdater({
+        autoUpdater,
+        currentVersion: app.getVersion(),
+        enabled: app.isPackaged,
+        canInstall: canInstallUpdates({platform: process.platform, env: process.env}),
+        onChange: pushState,
+    });
+
     registerIpc();
     popup = await createPopup();
 
@@ -482,6 +511,9 @@ async function start() {
     powerMonitor.on('resume', () => setTimeout(refresh, 5000));
 
     pushState();
+    // Só agora: a bandeja e o popup já existem para receber o resultado.
+    updater.check();
+    setInterval(() => updater.check(), CHECK_INTERVAL_MS);
     const firstRefresh = refresh();
     setInterval(refresh, POLL_SECONDS * 1000);
 
