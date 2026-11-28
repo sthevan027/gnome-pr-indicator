@@ -165,6 +165,30 @@ Pra gerar o instalador e a versão portátil em `windows/dist/`:
 bun run dist
 ```
 
+## Atualização
+
+O app procura versão nova ao iniciar, a cada 6 horas e pelo botão *Procurar
+atualizações* nas configurações (que também mostra a versão atual).
+
+Quando há versão nova, aparece uma linha no popup, acima de *Atualizar agora*.
+**Nada é baixado sem o seu clique:**
+
+- `Versão X disponível · Baixar`: começa o download.
+- `Baixando versão X… 42%`: em andamento.
+- `Versão X pronta · Reiniciar para atualizar`: instala e reabre o app. No
+  Windows, é por essa linha que a versão é instalada. No Linux (AppImage), ela
+  também é instalada ao escolher *Sair* no menu da bandeja.
+- `Falha ao baixar · Tentar de novo`: baixa de novo.
+
+Na versão **portátil** e no Linux fora do AppImage, a linha vira
+`Versão X disponível · Abrir download` e abre a página da release no navegador.
+
+Quem usa a 1.2.2 ou anterior precisa instalar a 1.3.0 uma vez à mão; as
+seguintes chegam pelo próprio app.
+
+Os binários não são assinados. A integridade depende do HTTPS e do SHA-512 do
+`latest.yml`, que o atualizador confere antes de instalar.
+
 ## Onde ficam os dados
 
 Ficam em `%APPDATA%\PR Indicator\`:
@@ -190,6 +214,7 @@ src/main.js             processo principal: bandeja, popup, polling, IPC
 src/preload.cjs         ponte segura main ↔ popup (contextIsolation)
 src/github-client.js    buscas no GitHub, token (gh → manual), AuthError
 src/settings-store.js   settings.json + token cifrado
+src/updater.js          atualização: checagem, download e instalação (electron-updater)
 src/badge.js            texto do selo e do tooltip
 src/popup-position.js   onde abrir o popup conforme a barra de tarefas
 src/autostart.js        entrada "abrir com o Windows"

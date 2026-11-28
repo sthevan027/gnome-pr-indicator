@@ -12,4 +12,8 @@ contextBridge.exposeInMainWorld('prIndicator', {
     submitToken: value => ipcRenderer.invoke('submit-token', value),
     resize: height => ipcRenderer.send('resize', height),
     hide: () => ipcRenderer.send('hide'),
+    checkUpdate: () => ipcRenderer.send('check-update'),
+    downloadUpdate: () => ipcRenderer.send('download-update'),
+    installUpdate: () => ipcRenderer.send('install-update'),
+    openRelease: () => ipcRenderer.send('open-release'),
 });

@@ -11,6 +11,7 @@
         <!-- Lista de PRs -->
         <div id="pr-view">
             <div id="sections"></div>
+            <button id="update-row" class="popup-menu-item pr-indicator-update" type="button" hidden></button>
             <div class="refresh-row">
                 <button id="refresh" class="popup-menu-item refresh-button" type="button">Atualizar agora</button>
                 <button id="settings" class="settings-button" type="button" aria-label="Configurações">
@@ -40,6 +41,11 @@
                        placeholder="Token do GitHub (escopos repo, read:org)">
                 <div id="token-feedback" class="pr-indicator-empty"></div>
             </div>
+
+            <div class="pr-indicator-section-title">Atualização</div>
+            <div id="update-version" class="popup-menu-item"></div>
+            <button id="check-update" class="popup-menu-item" type="button">Procurar atualizações</button>
+            <div id="update-check" class="popup-menu-item pr-indicator-empty"></div>
         </div>
     </div>
 

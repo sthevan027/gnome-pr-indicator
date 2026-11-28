@@ -340,6 +340,25 @@ body.theme-auto-light .settings-button:hover {
     opacity: 0.5;
 }
 
+/* Linha de atualização: destaque na cor de acento; texto longo corta com reticências. */
+.pr-indicator-update {
+    color: var(--accent);
+    font-weight: bold;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Botão desabilitado não acende no hover. */
+button.popup-menu-item:disabled:hover,
+button.popup-menu-item:disabled:active {
+    background: none;
+}
+
+#check-update:disabled {
+    opacity: 0.5;
+}
+
 /* ---- layout ---- */
 
 .refresh-row {
